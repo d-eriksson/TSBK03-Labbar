@@ -65,8 +65,8 @@ Model* squareModel;
 //----------------------Globals-------------------------------------------------
 Point3D cam, point;
 Model *model1;
-FBOstruct *fbo1, *fbo2;
-GLuint phongshader = 0, plaintextureshader = 0;
+FBOstruct *fbo1, *fbo2, *fbo3;
+GLuint phongshader = 0, plaintextureshader = 0, LPfilter = 0, LPfilter2= 0, HighLightShader = 0, CombineFBO=0;
 
 //-------------------------------------------------------------------------------------
 
@@ -82,13 +82,20 @@ void init(void)
 	printError("GL inits");
 
 	// Load and compile shaders
-	plaintextureshader = loadShaders("plaintextureshader.vert", "plaintextureshader.frag");  // puts texture on teapot
-	phongshader = loadShaders("phong.vert", "phong.frag");  // renders with light (used for initial renderin of teapot)
+	plaintextureshader = loadShaders("shaders/plaintextureshader.vert", "shaders/plaintextureshader.frag");  // puts texture on teapot
+	CombineFBO = loadShaders("shaders/CombineFBO.vert", "shaders/CombineFBO.frag");  // puts texture on teapot
+	//LPfilter = loadShaders("shaders/Gaussian5.vert", "shaders/Gaussian5.frag");  // Low-Pass filter
+	LPfilter = loadShaders("shaders/DiagonalShine.vert", "shaders/DiagonalShine.frag");  // Shining filter
+	//LPfilter = loadShaders("shaders/VertLight.vert", "shaders/VertLight.frag");  // Low-Pass filter
+	//LPfilter2 = loadShaders("shaders/HorizontalLight.vert", "shaders/HorizonalLight.frag");  // Low-Pass filter
+	HighLightShader = loadShaders("shaders/HighLights.vert", "shaders/HighLights.frag");  // renders with light (used for initial renderin of teapot)
+	phongshader = loadShaders("shaders/phong.vert", "shaders/phong.frag");  // renders with light (used for initial renderin of teapot)
 
 	printError("init shader");
 
 	fbo1 = initFBO(W, H, 0);
 	fbo2 = initFBO(W, H, 0);
+	fbo3 = initFBO(W, H, 0);
 
 	// load the model
 //	model1 = LoadModelPlus("teapot.obj");
@@ -151,17 +158,22 @@ void display(void)
 
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
-//	glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.
-	useFBO(0L, fbo1, 0L);
-	glClearColor(0.0, 0.0, 0.0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Activate second shader program
-	glUseProgram(plaintextureshader);
-
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, "in_TexCoord");
+	glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.
+	
+	runfilter(HighLightShader,fbo1,0L,fbo2);
+	//runfilter(LPfilter, fbo2,0L,0L);
+	//runfilter(CombineFBO,fbo1,fbo3,0L);
+	int iter = 40;
+	for(int i = 0; i<iter; i++){
+		if(i % 2 == 0){
+			runfilter(LPfilter,fbo2,0L,fbo3);
+		}
+		else{
+			runfilter(LPfilter,fbo3,0L,fbo2);
+		}
+	}
+	runfilter(CombineFBO,fbo2, fbo1,0L);
+	
 
 	glutSwapBuffers();
 }
@@ -172,7 +184,24 @@ void reshape(GLsizei w, GLsizei h)
 	GLfloat ratio = (GLfloat) w / (GLfloat) h;
 	projectionMatrix = perspective(90, ratio, 1.0, 1000);
 }
+void runfilter(GLuint shader, FBOstruct *in1, FBOstruct *in2, FBOstruct *out)
 
+{
+
+    glUseProgram(shader);
+
+    // Many of these things would be more efficiently done once and for all
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
+    glUniform1i(glGetUniformLocation(shader, "texUnit2"), 1);
+
+    useFBO(out, in1, in2);
+
+    DrawModel(squareModel, shader, "in_Position", NULL, "in_TexCoord");
+    glFlush();
+
+}
 
 // This function is called whenever the computer is idle
 // As soon as the machine is idle, ask GLUT to trigger rendering of a new

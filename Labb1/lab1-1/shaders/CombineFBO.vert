@@ -7,6 +7,7 @@ out vec2 outTexCoord;
 
 void main(void)
 {
+	
 	outTexCoord = in_TexCoord;
 	gl_Position = vec4(in_Position, 1.0);
 }
