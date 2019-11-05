@@ -36,8 +36,8 @@
 
 #define NUM_LIGHTS 1
 #define kBallSize 0.1
-#define ELASTICITY 1.0
-#define FRICTION 0.3
+#define ELASTICITY 0.0
+#define FRICTION 1.0
 #define BOXSIZE 1.0
 
 #define abs(x) (x > 0.0? x: -x)
@@ -62,17 +62,6 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-typedef struct{
-    vec3 v1;
-    vec3 v2;
-    vec3 v3;
-    vec3 v4;
-    vec3 v5;
-    vec3 v6;
-    vec3 v7;
-    vec3 v8;
-}Box
-
 typedef struct
 {
   Model* model;
@@ -101,7 +90,7 @@ typedef struct
     ka, kd, ks, shininess;  // coefficients and specular exponent
 } Material;
 
-Material ballMt = { { 1.0, 1.0, 1.0, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
+Material ballMt = { { 0.4, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                     0.1, 0.6, 1.0, 50
                 },
         shadowMt = { { 0.0, 0.0, 0.0, 0.5 }, { 0.0, 0.0, 0.0, 0.5 },
@@ -112,15 +101,19 @@ Material ballMt = { { 1.0, 1.0, 1.0, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 },
         tableSurfaceMt = { { 0.1, 0.5, 0.1, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
                     0.1, 0.6, 1.0, 0.0
+                },
+        controlableBallMt= { { 0.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
+                    0.1, 0.6, 1.0, 0.0
                 };
 
 
-enum {kNumBalls = 150}; // Change as desired, max 16
+enum {kNumBalls = 800}; // Change as desired
 
 //------------------------------Globals---------------------------------
 ModelTexturePair tableAndLegs, tableSurf;
 Model *sphere;
 Ball ball[kNumBalls]; // We only use kNumBalls but textures for all 16 are always loaded so they must exist. So don't change here, change above.
+Ball ControlableBall;
 
 
 GLfloat deltaT, currentTime;
@@ -178,28 +171,29 @@ void updateWorld()
 	int i, j;
 	for (i = 0; i < kNumBalls; i++)
 	{
-		ball[i].F = SetVector(0,0,0);
+		ball[i].F = SetVector(0,-9.82*ball[i].mass,0);
 		ball[i].T = SetVector(0,0,0);
 	}
 
 	// Wall tests
 	for (i = 0; i < kNumBalls; i++)
 	{
-		if (ball[i].X.x < -0.82266270 + kBallSize)
+		if (ball[i].X.x < -BOXSIZE + kBallSize)
 			ball[i].P.x = abs(ball[i].P.x);
-		if (ball[i].X.x > 0.82266270 - kBallSize)
+		if (ball[i].X.x > BOXSIZE - kBallSize)
 			ball[i].P.x = -abs(ball[i].P.x);
-		if (ball[i].X.z < -1.84146270 + kBallSize)
+        if (ball[i].X.y < 0 + kBallSize)
+            ball[i].P.y = abs(ball[i].P.y);
+		if (ball[i].X.z < -BOXSIZE + kBallSize)
 			ball[i].P.z = abs(ball[i].P.z);
-		if (ball[i].X.z > 1.84146270 - kBallSize)
+		if (ball[i].X.z > BOXSIZE - kBallSize)
 			ball[i].P.z = -abs(ball[i].P.z);
 	}
 
 	// Detect collisions, calculate speed differences, apply forces
 	for (i = 0; i < kNumBalls; i++)
         for (j = i+1; j < kNumBalls; j++)
-        {
-            
+        {            
             if(abs(Norm(VectorSub(ball[i].X, ball[j].X))) <= 2*kBallSize){
 
 		        ball[i].v = ScalarMult(ball[i].P, 1.0/(ball[i].mass));
@@ -207,7 +201,7 @@ void updateWorld()
                 if(DotProduct(VectorSub(ball[i].X, ball[j].X), VectorSub(ball[i].v, ball[j].v)) < 0.0){
                     vec3 SpeedDifference = VectorSub(ball[i].v , ball[j].v);
                     vec3 CollisionNormal = Normalize(VectorSub(ball[i].X, ball[j].X));
-                    float J = ((DotProduct(SpeedDifference, CollisionNormal) * (ELASTICITY +1))/ (1/ball[i].mass + 1/ball[j].mass))*-1;
+                    float J = ((DotProduct(SpeedDifference, CollisionNormal) * (ELASTICITY + 1))/ (1/ball[i].mass + 1/ball[j].mass))*-1;
                     ball[i].F = VectorAdd(ball[i].F, ScalarMult(ScalarMult(CollisionNormal,J),1/deltaT));
                     ball[j].F = VectorAdd(ball[j].F, ScalarMult(ScalarMult(ScalarMult(CollisionNormal,-1),J),1/deltaT));
                 }
@@ -220,7 +214,7 @@ void updateWorld()
 	// friction against floor, simplified as well as more correct
     vec3 Up = SetVector(0,1,0);
     
-	for (i = 0; i < kNumBalls; i++)
+	/*for (i = 0; i < kNumBalls; i++)
 	{
       
         //float AngleSpeed = Norm(ball[i].v) * deltaT / kBallSize;
@@ -229,8 +223,8 @@ void updateWorld()
         vec3 velocity = VectorAdd(ball[i].v, CrossProduct(ball[i].omega,ScalarMult(Up,-kBallSize)));
         vec3 friction = ScalarMult(velocity, -FRICTION);
         ball[i].F = VectorAdd(ball[i].F, friction);
-        ball[i].T = VectorAdd(ball[i].T,CrossProduct(ScalarMult(Up,-kBallSize), friction));  
-	}
+        //ball[i].T = VectorAdd(ball[i].T,CrossProduct(ScalarMult(Up,-kBallSize), friction));  
+	}*/
 
 // Update state, follows the book closely
 	for (i = 0; i < kNumBalls; i++)
@@ -270,35 +264,25 @@ void renderBall(int ballNr)
     glBindTexture(GL_TEXTURE_2D, ball[ballNr].tex);
 
     // Ball with rotation
-    transMatrix = T(ball[ballNr].X.x, kBallSize, ball[ballNr].X.z); // position
+    transMatrix = T(ball[ballNr].X.x, ball[ballNr].X.y, ball[ballNr].X.z); // position
     tmpMatrix = Mult(transMatrix, ball[ballNr].R); // ball rotation
+    tmpMatrix = Mult(S(kBallSize/0.1, kBallSize/0.1, kBallSize/0.1), tmpMatrix);
     tmpMatrix = Mult(viewMatrix, tmpMatrix);
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
     loadMaterial(ballMt);
     DrawModel(sphere, shader, "in_Position", "in_Normal", NULL);
+}
+void renderControlableBall()
+{
+    glBindTexture(GL_TEXTURE_2D, ControlableBall.tex);
 
-    // Simple shadow
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    tmpMatrix = S(1.0, 0.0, 1.0);
-    tmpMatrix = Mult(tmpMatrix, transMatrix);
-    tmpMatrix = Mult(tmpMatrix, ball[ballNr].R);
+    // Ball with rotation
+    transMatrix = T(ControlableBall.X.x, ControlableBall.X.y, ControlableBall.X.z); // position
+    tmpMatrix = Mult(transMatrix, S(2, 2, 2));
     tmpMatrix = Mult(viewMatrix, tmpMatrix);
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
-    loadMaterial(shadowMt);
+    loadMaterial(controlableBallMt);
     DrawModel(sphere, shader, "in_Position", "in_Normal", NULL);
-}
-
-void renderTable()
-{
-// Frame and legs, brown, no texture
-    loadMaterial(tableMt);
-    printError("loading material");
-    renderModelTexturePair(&tableAndLegs);
-
-// Table surface (green texture)
-    loadMaterial(tableSurfaceMt);
-    renderModelTexturePair(&tableSurf);
 }
 //-------------------------------------------------------------------------------------
 
@@ -307,7 +291,7 @@ void init()
 	dumpInfo();  // shader info
 
 	// GL inits
-	glClearColor(0.1, 0.1, 0.3, 0);
+	glClearColor(0.4, 0.4, 0.4, 0);
 	glClearDepth(1.0);
 
 	glEnable(GL_DEPTH_TEST);
@@ -339,21 +323,25 @@ void init()
 	free(textureStr);
 
     // Initialize ball data, positions etc
-    
+    float BallMargin = 0.01;
+    int BallsPerRow = floor(BOXSIZE/(kBallSize + BallMargin));
 	for (i = 0; i < kNumBalls; i++)
 	{
 
 		ball[i].mass = 1.0;
-		ball[i].X = SetVector(-0.82266270 + (kBallSize*2 +0.01) *(i%6), 1.0, -1.84146270 + (kBallSize*2 +0.01) *(i/6));
+        //(kBallSize*2+BallMargin)(i/(BallsPerRow*BallsPerRow))
+		ball[i].X = SetVector(-BOXSIZE+ (kBallSize*2 + BallMargin) *(i%BallsPerRow),(kBallSize*2 + BallMargin) * (i/(BallsPerRow*BallsPerRow)), -BOXSIZE + (kBallSize*2 + BallMargin) *((i%(BallsPerRow*BallsPerRow))/BallsPerRow));
 		ball[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
 		ball[i].R = IdentityMatrix();
 	}
 
 
+    ControlableBall.X = SetVector(0,2.0,0.0);
 
-    cam = SetVector(0, 2, 2);
+    ControlableBall.mass = 1.0;
+    cam = SetVector(0, 4, 4);
     point = SetVector(0, 0, 0);
-    zprInit(&viewMatrix, cam, point);  // camera controls
+    zprInit(&viewMatrix, cam, point, &ControlableBall.X );  // camera controls
 
     resetElapsedTime();
 }
@@ -368,7 +356,7 @@ void display(void)
     updateWorld();
 
     // Clear framebuffer & zbuffer
-	glClearColor(0.1, 0.1, 0.3, 0);
+	glClearColor(0.3, 0.3, 0.3, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 //    int time = glutGet(GLUT_ELAPSED_TIME);
@@ -381,8 +369,7 @@ void display(void)
 
     printError("uploading to shader");
 
-    renderTable();
-
+    renderControlableBall();
 	for (i = 0; i < kNumBalls; i++)
         renderBall(i);
 
@@ -390,7 +377,26 @@ void display(void)
 
 	glutSwapBuffers();
 }
+void mouse(int mouse, int state, int x, int y){
+    switch(mouse){
+        case GLUT_RIGHT_BUTTON:
+            if(state == GLUT_DOWN){
+                lrint(x);
+                glutPostRedisplay();
+                
+            }
+        break;
+    }
+}
+void MyKeyboardFunc(unsigned char Key, int x, int y){
+    switch(Key){
+        case 'h':
+            ControlableBall.X = SetVector(0,ControlableBall.X.y -0.1,0);
+        break;
+    }
+        
 
+}
 void onTimer(int value)
 {
     glutPostRedisplay();
@@ -417,8 +423,10 @@ int main(int argc, char **argv)
     glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
     glutInitWindowSize(W, H);
 	glutInitContextVersion(3, 2);
-	glutCreateWindow ("Biljardbordet");
+	glutCreateWindow ("Water Simulator 2000 Xtreme Edition Ulitmate 2020 limited");
 	glutDisplayFunc(display);
+    glutMouseFunc(mouse);
+    glutKeyboardFunc(MyKeyboardFunc);
 	glutReshapeFunc(reshape);
     glutTimerFunc(20, &onTimer, 0);
 

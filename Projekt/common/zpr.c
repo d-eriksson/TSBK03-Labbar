@@ -31,6 +31,7 @@ static vec3 camera, lookAtPoint,
 
 static GLfloat angle_y = 0.0, angle_x = 0.0;
 static int lastX = 300, lastY = 300;
+static vec3 *controlBall;
 
 //------------------------------------------------------------------------------
 
@@ -51,7 +52,7 @@ void updateCameraMatrix(mat4 *matrix)
 //    glUniformMatrix4fv(glGetUniformLocation(shader, viewMatName), 1, GL_TRUE, _cameraMatrix.m);
 }
 
-void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point)
+void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point, vec3 *c_Ball)
 {
 //    shader = s; // EN shader?! Orimligt!
 //    viewMatName = vMatName;
@@ -60,6 +61,7 @@ void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point)
 //    _projectionMatrix = projMatrix; // ???
     camera = cam;
     lookAtPoint = point;
+    controlBall = c_Ball;
     up = SetVector(0, 1, 0);
 
     updateCameraMatrix(NULL);
@@ -92,6 +94,7 @@ void zprMouse(int button, int state, int x, int y)
                 lastY = y;
             }
           _mouseLeft   = true;
+          *controlBall = SetVector(0, y, 0);
           break;
       }
       case GLUT_MIDDLE_BUTTON: _mouseMiddle = true; break;
@@ -101,7 +104,7 @@ void zprMouse(int button, int state, int x, int y)
 
 void zprMouseFunc(int x, int y)
 {
-    if(_mouseLeft)
+    if(false)
     {
         angle_y = (float)(x - lastX) *0.002;
         angle_x = (float)(y - lastY) *0.002;
@@ -164,6 +167,9 @@ void zprKey(unsigned char key, int x, int y)
     angle = rotSpeed;
     turnedX = true;
      break;
+    case 'h':
+    *controlBall = SetVector(0,controlBall->y - 0.1, 0);
+    break;
    }
 
     dX = (GLfloat) _cameraMatrix->m[0] * speedX + _cameraMatrix->m[4] * speedY + _cameraMatrix->m[8] * speedZ;

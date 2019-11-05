@@ -35,7 +35,7 @@ extern "C"
 {
 #endif
 
-void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point);
+void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point, vec3 *c_ball);
 
 void updateCameraMatrix(mat4 *matrix);    // matrix is passed as a parameter when both cameraMatrix
                                                  // and camera and lookAtPoint have to be transformed.

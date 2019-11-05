@@ -43,7 +43,8 @@ void main(void)
 {
     switch(objID)
     {
-        case 0: out_Color = calculateLighting() * diffColor * texture(texUnit, outTexCoord); break;
+        case 0: out_Color = calculateLighting() * diffColor; break;
         case 1: out_Color = calculateLighting() * diffColor; break;
     }
+    
 }
