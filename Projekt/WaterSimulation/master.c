@@ -101,7 +101,6 @@ GLfloat specularExponent[] = {50.0};
 GLint directional[] = {0};
 vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
 
-
 //----------------------------------Utility functions-----------------------------------
 
 void loadMaterial(Material mt)
@@ -121,7 +120,7 @@ void updateWorld()
 	}
 
 	// Wall tests
-    	for (i = 0; i < kNumParticles; i++)
+    for (i = 0; i < kNumParticles; i++)
 	{
 		if (particles[i].X.x < -BOXSIZE + kParticleSize)
 			particles[i].P.x = abs(particles[i].P.x);
@@ -137,10 +136,10 @@ void updateWorld()
 
 	// Detect collisions, calculate speed differences, apply forces
 	for (i = 0; i < kNumParticles; i++)
+    {
         for (j = i+1; j < kNumParticles; j++)
         {            
             if(abs(Norm(VectorSub(particles[i].X, particles[j].X))) <= 0.8*(2*kParticleSize)){
-
 		        particles[i].v = ScalarMult(particles[i].P, 1.0/(particles[i].mass));
 		        particles[j].v = ScalarMult(particles[j].P, 1.0/(particles[j].mass));
                 if(DotProduct(VectorSub(particles[i].X, particles[j].X), VectorSub(particles[i].v, particles[j].v)) < 0.0){
@@ -150,21 +149,21 @@ void updateWorld()
                     particles[i].F = VectorAdd(particles[i].F, ScalarMult(ScalarMult(CollisionNormal,J),1/deltaT));
                     particles[j].F = VectorAdd(particles[j].F, ScalarMult(ScalarMult(ScalarMult(CollisionNormal,-1),J),1/deltaT));
                 }
-                
             }
-
+                
         }
-// Update state, follows the book closely
+
+    }
+    // Update state, follows the book closely
 	for (i = 0; i < kNumParticles; i++)
 	{
 		vec3 dX, dP;
-//		v := P * 1/mass
-
+        //v := P * 1/mass
 		particles[i].v = ScalarMult(particles[i].P, 1.0/(particles[i].mass));
-//		X := X + v*dT
+        //X := X + v*dT
 		dX = ScalarMult(particles[i].v, deltaT); // dX := v*dT
 		particles[i].X = VectorAdd(particles[i].X, dX); // X := X + dX
-//		P := P + F * dT
+        //P := P + F * dT
 		dP = ScalarMult(particles[i].F, deltaT); // dP := F*dT
 		particles[i].P = VectorAdd(particles[i].P, dP); // P := P + dP
 	}
