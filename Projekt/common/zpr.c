@@ -94,7 +94,6 @@ void zprMouse(int button, int state, int x, int y)
                 lastY = y;
             }
           _mouseLeft   = true;
-          *controlBall = SetVector(0, y, 0);
           break;
       }
       case GLUT_MIDDLE_BUTTON: _mouseMiddle = true; break;
@@ -104,7 +103,7 @@ void zprMouse(int button, int state, int x, int y)
 
 void zprMouseFunc(int x, int y)
 {
-    if(false)
+    if(_mouseLeft)
     {
         angle_y = (float)(x - lastX) *0.002;
         angle_x = (float)(y - lastY) *0.002;
@@ -168,7 +167,10 @@ void zprKey(unsigned char key, int x, int y)
     turnedX = true;
      break;
     case 'h':
-    *controlBall = SetVector(0,controlBall->y - 0.1, 0);
+      *controlBall = SetVector(0,controlBall->y - 0.1, 0);
+    break;
+    case 'g':
+      *controlBall = SetVector(0,controlBall->y +0.1, 0);
     break;
    }
 

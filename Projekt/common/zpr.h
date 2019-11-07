@@ -27,7 +27,7 @@
 		#include <GL/gl.h>
 	#endif
 #endif
-#include "MicroGlut.h"
+#include <GL/glut.h>
 #include "VectorUtils3.h"
 
 #ifdef __cplusplus
