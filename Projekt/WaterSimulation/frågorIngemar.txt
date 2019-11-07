@@ -1,0 +1,6 @@
+Vad vi vill fråga.
+- Text varför fungerar det inte för?
+- Musevent röra på bollen
+- Kollision varför sticker bollarna iväg som de gör alt. skuttar runt 
+- Är vår tanke okej.
+    - Vi tänkte göra detta som en FBO för att hantera datan på GPU.

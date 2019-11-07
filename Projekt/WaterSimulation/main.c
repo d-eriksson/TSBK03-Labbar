@@ -13,10 +13,10 @@
 #include <stdlib.h>
 #ifdef __APPLE__
 	#include <OpenGL/gl3.h>
-	#include "MicroGlut.h"
+	//#include "MicroGlut.h"
 	// uses framework Cocoa
 #else
-	#include "MicroGlut.h" // #include <GL/glut.h>
+	#include <GL/glut.h>//#include "MicroGlut.h" // 
 	#include <GL/gl.h>
 #endif
 
@@ -107,7 +107,7 @@ Material ballMt = { { 0.4, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumBalls = 800}; // Change as desired
+enum {kNumBalls = 700}; // Change as desired
 
 //------------------------------Globals---------------------------------
 ModelTexturePair tableAndLegs, tableSurf;
@@ -176,7 +176,7 @@ void updateWorld()
 	}
 
 	// Wall tests
-	for (i = 0; i < kNumBalls; i++)
+    	for (i = 0; i < kNumBalls; i++)
 	{
 		if (ball[i].X.x < -BOXSIZE + kBallSize)
 			ball[i].P.x = abs(ball[i].P.x);
@@ -184,6 +184,7 @@ void updateWorld()
 			ball[i].P.x = -abs(ball[i].P.x);
         if (ball[i].X.y < 0 + kBallSize)
             ball[i].P.y = abs(ball[i].P.y);
+            //ball[i].F.y = 0;
 		if (ball[i].X.z < -BOXSIZE + kBallSize)
 			ball[i].P.z = abs(ball[i].P.z);
 		if (ball[i].X.z > BOXSIZE - kBallSize)
@@ -194,7 +195,7 @@ void updateWorld()
 	for (i = 0; i < kNumBalls; i++)
         for (j = i+1; j < kNumBalls; j++)
         {            
-            if(abs(Norm(VectorSub(ball[i].X, ball[j].X))) <= 2*kBallSize){
+            if(abs(Norm(VectorSub(ball[i].X, ball[j].X))) <= 0.8*(2*kBallSize)){
 
 		        ball[i].v = ScalarMult(ball[i].P, 1.0/(ball[i].mass));
 		        ball[j].v = ScalarMult(ball[j].P, 1.0/(ball[j].mass));
@@ -324,13 +325,13 @@ void init()
 
     // Initialize ball data, positions etc
     float BallMargin = 0.01;
-    int BallsPerRow = floor(BOXSIZE/(kBallSize + BallMargin));
+    int BallsPerRow = floor(BOXSIZE/(2*kBallSize + BallMargin));
 	for (i = 0; i < kNumBalls; i++)
 	{
 
 		ball[i].mass = 1.0;
         //(kBallSize*2+BallMargin)(i/(BallsPerRow*BallsPerRow))
-		ball[i].X = SetVector(-BOXSIZE+ (kBallSize*2 + BallMargin) *(i%BallsPerRow),(kBallSize*2 + BallMargin) * (i/(BallsPerRow*BallsPerRow)), -BOXSIZE + (kBallSize*2 + BallMargin) *((i%(BallsPerRow*BallsPerRow))/BallsPerRow));
+		ball[i].X = SetVector(-BOXSIZE+ (kBallSize*2 + BallMargin) *(i%BallsPerRow),1 +(kBallSize*2 + BallMargin) * (i/(BallsPerRow*BallsPerRow)), -BOXSIZE + (kBallSize*2 + BallMargin) *((i%(BallsPerRow*BallsPerRow))/BallsPerRow));
 		ball[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
 		ball[i].R = IdentityMatrix();
 	}
@@ -345,7 +346,19 @@ void init()
 
     resetElapsedTime();
 }
-
+void drawStrokeText(char*string,int x,int y,int z)
+{
+	  //char *c;
+	  //glPushMatrix();
+	  //glTranslatef(x, y+8,z);
+	  //glScalef(0.09f,-0.08f,z);
+  
+	  /*for (c=string; *c != '\0'; c++)
+	  {
+    		glutStrokeCharacter(GLUT_STROKE_ROMAN , *c);
+	  }*/
+	  //glPopMatrix();
+}
 //-------------------------------callback functions------------------------------------------
 void display(void)
 {
@@ -353,6 +366,7 @@ void display(void)
     // This function is called whenever it is time to render
     //  a new frame; due to the idle()-function below, this
     //  function will get called several times per second
+    
     updateWorld();
 
     // Clear framebuffer & zbuffer
@@ -360,15 +374,18 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 //    int time = glutGet(GLUT_ELAPSED_TIME);
-
+    
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-
+    
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
 
     printError("uploading to shader");
-
+    glClear(GL_COLOR_BUFFER_BIT);
+    glLoadIdentity();
+	//glColor3f(0,1,0);
+    //drawStrokeText("hej", 200,200,0);
     renderControlableBall();
 	for (i = 0; i < kNumBalls; i++)
         renderBall(i);
@@ -376,27 +393,9 @@ void display(void)
     printError("rendering");
 
 	glutSwapBuffers();
-}
-void mouse(int mouse, int state, int x, int y){
-    switch(mouse){
-        case GLUT_RIGHT_BUTTON:
-            if(state == GLUT_DOWN){
-                lrint(x);
-                glutPostRedisplay();
-                
-            }
-        break;
-    }
-}
-void MyKeyboardFunc(unsigned char Key, int x, int y){
-    switch(Key){
-        case 'h':
-            ControlableBall.X = SetVector(0,ControlableBall.X.y -0.1,0);
-        break;
-    }
-        
 
 }
+
 void onTimer(int value)
 {
     glutPostRedisplay();
@@ -425,8 +424,6 @@ int main(int argc, char **argv)
 	glutInitContextVersion(3, 2);
 	glutCreateWindow ("Water Simulator 2000 Xtreme Edition Ulitmate 2020 limited");
 	glutDisplayFunc(display);
-    glutMouseFunc(mouse);
-    glutKeyboardFunc(MyKeyboardFunc);
 	glutReshapeFunc(reshape);
     glutTimerFunc(20, &onTimer, 0);
 
