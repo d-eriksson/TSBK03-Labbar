@@ -118,7 +118,7 @@ void updateWorld()
 	for (i = 0; i < kNumParticles; i++)
 	{
         // accelerate according to gravity
-        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-0.52,0), deltaT * deltaT));
+        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-1.52,0), deltaT * deltaT));
 
 	}
 
@@ -140,12 +140,8 @@ void updateWorld()
                 particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor * 0.5));
                 particles[j].X = VectorAdd(particles[j].X,ScalarMult(colNormal,factor * 0.5));
 
-               
-
-            }
-                
+            }      
         }
-
     }
 
 	// Wall tests + inertia
@@ -155,7 +151,6 @@ void updateWorld()
             particles[i].X.x = -BOXSIZE + kParticleSize;
             particles[i].PX.x = particles[i].X.x ;
         }
-			
 
 		if (particles[i].X.x > BOXSIZE - kParticleSize){
             particles[i].X.x = BOXSIZE - kParticleSize;
@@ -172,7 +167,6 @@ void updateWorld()
             particles[i].PX.z = particles[i].X.z ;
         }
 			
-
 		if (particles[i].X.z > BOXSIZE - kParticleSize){
             particles[i].X.z = BOXSIZE - kParticleSize;
             particles[i].PX.z = particles[i].X.z ;
@@ -224,6 +218,29 @@ void updateWorld()
         }
 
     }
+    // Wall tests + inertia
+    for (i = 0; i < kNumParticles; i++)
+	{
+		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
+            particles[i].X.x = -BOXSIZE + kParticleSize;
+        }
+
+		if (particles[i].X.x > BOXSIZE - kParticleSize){
+            particles[i].X.x = BOXSIZE - kParticleSize;
+        }
+
+        if (particles[i].X.y < 0 + kParticleSize){
+            particles[i].X.y = kParticleSize;
+        }
+
+		if (particles[i].X.z < -BOXSIZE + kParticleSize){
+            particles[i].X.z = -BOXSIZE + kParticleSize;
+        }
+			
+		if (particles[i].X.z > BOXSIZE - kParticleSize){
+            particles[i].X.z = BOXSIZE - kParticleSize;
+        }		
+	}
 }
 
 void renderParticle(vec3 position, Material m)
@@ -268,7 +285,7 @@ void init()
     int ParticlesPerRow = floor(BOXSIZE/kParticleSize + 2*ParticleMargin);
 	for (int i = 0; i < kNumParticles; i++)
 	{
-		particles[i].X = SetVector((-BOXSIZE+kParticleSize) + ballSize *(i%ParticlesPerRow), 1 + kParticleSize +  ballSize * floor(i/(ParticlesPerRow*ParticlesPerRow)), (-BOXSIZE+kParticleSize) + ballSize * ((int)(i/ParticlesPerRow)%ParticlesPerRow));
+		particles[i].X = SetVector((-BOXSIZE+kParticleSize) + ballSize *(i%ParticlesPerRow), 4 + kParticleSize +  ballSize * floor(i/(ParticlesPerRow*ParticlesPerRow)), (-BOXSIZE+kParticleSize) + ballSize * ((int)(i/ParticlesPerRow)%ParticlesPerRow));
 		particles[i].PX = particles[i].X;
         particles[i].a = SetVector(0.0,0.0,0.0);
         //particles[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
