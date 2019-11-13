@@ -33,7 +33,7 @@
 #define ELASTICITY 0.0
 #define BOXSIZE 0.5
 #define RENDERBOXSIZE 1.0
-#define RENDERBALLS false
+#define RENDERBALLS true
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -381,17 +381,20 @@ void display(void)
     glCullFace(GL_BACK);
     
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-    evaluateGrid();// Causes segmentation fault, probably a array index out of bounds error.
-    march();
+    if(!RENDERBALLS){
+        evaluateGrid();
+        march();
+        Water = LoadDataToModel(Vertex_Array_Buffer_Water,NULL,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
+        transMatrix = T(0.0, 0.0, 0.0); // position
+        tmpMatrix = Mult(viewMatrix, transMatrix);
+        glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+        loadMaterial(ControlableParticleMt);
+        DrawModel(Water, shader, "in_Position", "in_Normal", NULL);
+    }
     printError("uploading to shader");
 
 
-    Water = LoadDataToModel(Vertex_Array_Buffer_Water,NULL,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
-    transMatrix = T(0.0, 0.0, 0.0); // position
-    tmpMatrix = Mult(viewMatrix, transMatrix);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
-    loadMaterial(ControlableParticleMt);
-    DrawModel(Water, shader, "in_Position", "in_Normal", NULL);
+
 
     renderParticle(ControlableParticle.X, ControlableParticleMt);
     if(RENDERBALLS){
