@@ -32,8 +32,8 @@
 #define kParticleSize 0.1
 #define ELASTICITY 0.0
 #define BOXSIZE 0.5
-#define RENDERBOXSIZE 1.0
-#define RENDERBALLS true
+#define RENDERBOXSIZE 4.0
+#define RENDERBALLS false
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -71,9 +71,9 @@ typedef struct{
 typedef struct
 {
   GLfloat mass;
-  vec3 X, P; // position, linear momentum, angular momentum
-  vec3 F;
-  vec3 v; // Change in velocity
+  vec3 X; // position, 
+  vec3 PX; // previous position
+  vec3 a; // Acceleration
 } Particle;
 
 typedef struct
@@ -135,59 +135,134 @@ void loadMaterial(Material mt)
 //---------------------------------- physics update and billiard table rendering ----------------------------------
 void updateWorld()
 {
-	// Zero forces
 	int i, j;
+
+    // Add gravity
 	for (i = 0; i < kNumParticles; i++)
 	{
-		particles[i].F = SetVector(0,-9.82*particles[i].mass,0);
-	}
-	// Wall tests
-    for (i = 0; i < kNumParticles; i++)
-	{
-		if (particles[i].X.x < -BOXSIZE + kParticleSize)
-			particles[i].P.x = abs(particles[i].P.x);
-		if (particles[i].X.x > BOXSIZE - kParticleSize)
-			particles[i].P.x = -abs(particles[i].P.x);
-        if (particles[i].X.y < 0 + kParticleSize)
-            particles[i].P.y = abs(particles[i].P.y);
-		if (particles[i].X.z < -BOXSIZE + kParticleSize)
-			particles[i].P.z = abs(particles[i].P.z);
-		if (particles[i].X.z > BOXSIZE - kParticleSize)
-			particles[i].P.z = -abs(particles[i].P.z);
+        // accelerate according to gravity
+        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-1.52,0), deltaT * deltaT));
+
 	}
 
-	// Detect collisions, calculate speed differences, apply forces
-	for (i = 0; i < kNumParticles; i++)
+    // Collision test
+    for (i = 0; i < kNumParticles; i++)
     {
         for (j = i+1; j < kNumParticles; j++)
-        {            
-            if(abs(Norm(VectorSub(particles[i].X, particles[j].X))) <= (2*kParticleSize)){
-		        particles[i].v = ScalarMult(particles[i].P, 1.0/(particles[i].mass));
-		        particles[j].v = ScalarMult(particles[j].P, 1.0/(particles[j].mass));
-                if(DotProduct(VectorSub(particles[i].X, particles[j].X), VectorSub(particles[i].v, particles[j].v)) < 0.0){
-                    vec3 SpeedDifference = VectorSub(particles[i].v , particles[j].v);
-                    vec3 CollisionNormal = Normalize(VectorSub(particles[i].X, particles[j].X));
-                    float J = ((DotProduct(SpeedDifference, CollisionNormal) * (ELASTICITY + 1))/ (1/particles[i].mass + 1/particles[j].mass))*-1;
-                    particles[i].F = VectorAdd(particles[i].F, ScalarMult(ScalarMult(CollisionNormal,J),1/deltaT));
-                    particles[j].F = VectorAdd(particles[j].F, ScalarMult(ScalarMult(ScalarMult(CollisionNormal,-1),J),1/deltaT));
-                }
+        {    
+            vec3 colNormal = VectorSub(particles[i].X, particles[j].X);
+            float slength = DotProduct(colNormal,colNormal);
+            float length = sqrt(slength);
+            float target = 2 * kParticleSize;
+
+            if(length < target){
+                
+
+                // resolve overlapping conflict
+                float factor = (length - target)/length;
+                particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor * 0.5));
+                particles[j].X = VectorAdd(particles[j].X,ScalarMult(colNormal,factor * 0.5));
+
+            }      
+        }
+    }
+
+	// Wall tests + inertia
+    for (i = 0; i < kNumParticles; i++)
+	{
+		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
+            particles[i].X.x = -BOXSIZE + kParticleSize;
+            particles[i].PX.x = particles[i].X.x ;
+        }
+
+		if (particles[i].X.x > BOXSIZE - kParticleSize){
+            particles[i].X.x = BOXSIZE - kParticleSize;
+            particles[i].PX.x = particles[i].X.x ;
+        }
+
+        if (particles[i].X.y < 0 + kParticleSize){
+            particles[i].X.y = kParticleSize;
+            particles[i].PX.y = particles[i].X.y ;
+        }
+
+		if (particles[i].X.z < -BOXSIZE + kParticleSize){
+            particles[i].X.z = -BOXSIZE + kParticleSize;
+            particles[i].PX.z = particles[i].X.z ;
+        }
+			
+		if (particles[i].X.z > BOXSIZE - kParticleSize){
+            particles[i].X.z = BOXSIZE - kParticleSize;
+            particles[i].PX.z = particles[i].X.z ;
+        }
+
+
+
+       // Inertia
+        vec3 dX = VectorSub(ScalarMult(particles[i].X,2),particles[i].PX);
+        particles[i].PX = particles[i].X;
+        particles[i].X = dX;
+			
+	}
+
+	// Collision test
+    for (i = 0; i < kNumParticles; i++)
+    {
+        for (j = i+1; j < kNumParticles; j++)
+        {    
+            vec3 colNormal = VectorSub(particles[i].X, particles[j].X);
+            float slength = DotProduct(colNormal,colNormal);
+            float length = sqrt(slength);
+            float target = 2 * kParticleSize;
+
+            if(length < target){
+                // prevois velocity
+                vec3 vi = VectorSub(particles[i].X, particles[i].PX);
+                vec3 vj = VectorSub(particles[j].X, particles[j].PX);
+
+                // resolve overlapping conflict
+                float factor = (length - target)/length;
+                particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor * 0.5));
+                particles[j].X = VectorAdd(particles[j].X,ScalarMult(colNormal,factor * 0.5));
+
+               // Compute the projected component factors
+                float fi = ELASTICITY * DotProduct(colNormal,vi) / slength ;
+                float fj = ELASTICITY * DotProduct(colNormal,vj) / slength ;
+
+                // Swap the projected components
+                vi = VectorAdd(vi,VectorSub(ScalarMult(colNormal,fj),ScalarMult(colNormal,fi)));
+                vj = VectorAdd(vj,VectorSub(ScalarMult(colNormal,fi),ScalarMult(colNormal,fj)));
+
+                // Adjust the previos pos
+                particles[i].PX = VectorSub(particles[i].X, vi);
+                particles[j].PX = VectorSub(particles[j].X, vj);
+
             }
                 
         }
 
     }
-    // Update state, follows the book closely
-	for (i = 0; i < kNumParticles; i++)
+    // Wall tests + inertia
+    for (i = 0; i < kNumParticles; i++)
 	{
-		vec3 dX, dP;
-        //v := P * 1/mass
-		particles[i].v = ScalarMult(particles[i].P, 1.0/(particles[i].mass));
-        //X := X + v*dT
-		dX = ScalarMult(particles[i].v, deltaT); // dX := v*dT
-		particles[i].X = VectorAdd(particles[i].X, dX); // X := X + dX
-        //P := P + F * dT
-		dP = ScalarMult(particles[i].F, deltaT); // dP := F*dT
-		particles[i].P = VectorAdd(particles[i].P, dP); // P := P + dP
+		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
+            particles[i].X.x = -BOXSIZE + kParticleSize;
+        }
+
+		if (particles[i].X.x > BOXSIZE - kParticleSize){
+            particles[i].X.x = BOXSIZE - kParticleSize;
+        }
+
+        if (particles[i].X.y < 0 + kParticleSize){
+            particles[i].X.y = kParticleSize;
+        }
+
+		if (particles[i].X.z < -BOXSIZE + kParticleSize){
+            particles[i].X.z = -BOXSIZE + kParticleSize;
+        }
+			
+		if (particles[i].X.z > BOXSIZE - kParticleSize){
+            particles[i].X.z = BOXSIZE - kParticleSize;
+        }		
 	}
 }
 void resetGrid(){
@@ -345,13 +420,15 @@ void init()
     glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 
     // Initialize ball data, positions etc
-    float ParticleMargin = 0.01;
-    int ParticlesPerRow = floor(BOXSIZE/(2*kParticleSize + ParticleMargin));
+    float ParticleMargin = 0.0001;
+    float ballSize = 2 * kParticleSize + ParticleMargin;
+    int ParticlesPerRow = floor(BOXSIZE/kParticleSize + 2*ParticleMargin);
 	for (int i = 0; i < kNumParticles; i++)
 	{
-		particles[i].mass = 1.0;
-		particles[i].X = SetVector(-BOXSIZE+ (kParticleSize*2 + ParticleMargin) *(i%ParticlesPerRow),1 +(kParticleSize*2 + ParticleMargin) * (i/(ParticlesPerRow*ParticlesPerRow)), -BOXSIZE + (kParticleSize*2 + ParticleMargin) *((i%(ParticlesPerRow*ParticlesPerRow))/ParticlesPerRow));
-		particles[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
+		particles[i].X = SetVector((-BOXSIZE+kParticleSize) + ballSize *(i%ParticlesPerRow), 4 + kParticleSize +  ballSize * floor(i/(ParticlesPerRow*ParticlesPerRow)), (-BOXSIZE+kParticleSize) + ballSize * ((int)(i/ParticlesPerRow)%ParticlesPerRow));
+		particles[i].PX = particles[i].X;
+        particles[i].a = SetVector(0.0,0.0,0.0);
+        //particles[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
 	}
 
 
