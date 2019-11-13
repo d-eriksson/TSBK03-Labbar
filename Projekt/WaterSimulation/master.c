@@ -29,8 +29,9 @@
 
 #define NUM_LIGHTS 1
 #define kParticleSize 0.1
+#define controlParticleSize 0.5
 #define ELASTICITY 1
-#define BOXSIZE 0.5
+#define BOXSIZE 0.7
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -142,6 +143,17 @@ void updateWorld()
 
             }      
         }
+        vec3 colNormal = VectorSub(particles[i].X, ControlableParticle.X);
+            float slength = DotProduct(colNormal,colNormal);
+            float length = sqrt(slength);
+            float target = kParticleSize + controlParticleSize ;
+
+            if(length < target){
+                // resolve overlapping conflict
+                float factor = (length - target)/length;
+                particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor));
+            } 
+
     }
 
 	// Wall tests + inertia
@@ -181,7 +193,7 @@ void updateWorld()
 			
 	}
 
-	// Collision test
+	// Collision test keep energy
     for (i = 0; i < kNumParticles; i++)
     {
         for (j = i+1; j < kNumParticles; j++)
@@ -218,7 +230,7 @@ void updateWorld()
         }
 
     }
-    // Wall tests + inertia
+    // Wall tests keep energy
     for (i = 0; i < kNumParticles; i++)
 	{
 		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
@@ -243,11 +255,11 @@ void updateWorld()
 	}
 }
 
-void renderParticle(vec3 position, Material m)
+void renderParticle(vec3 position, Material m, float scale)
 {
     
     transMatrix = T(position.x, position.y, position.z); // position
-    tmpMatrix = Mult(S(kParticleSize/0.1, kParticleSize/0.1, kParticleSize/0.1), transMatrix);
+    tmpMatrix = Mult(transMatrix, S(scale, scale, scale));
     tmpMatrix = Mult(viewMatrix, tmpMatrix);
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
     loadMaterial(m);
@@ -320,9 +332,9 @@ void display(void)
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
 
     printError("uploading to shader");
-    renderParticle(ControlableParticle.X, ControlableParticleMt);
+    renderParticle(ControlableParticle.X, ControlableParticleMt,controlParticleSize/0.1);
 	for (int i = 0; i < kNumParticles; i++)
-        renderParticle(particles[i].X, particleMt);
+        renderParticle(particles[i].X, particleMt, kParticleSize/ 0.1);
 
     printError("rendering");
 

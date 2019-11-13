@@ -24,6 +24,8 @@ static bool _mouseRight  = false;
 
 mat4 *_cameraMatrix; // , _projectionMatrix;
 
+mat4 *_projectionMatrix; // , _perspectiveMatrix;
+
 mat4 tMat, rotMatX, rotMatY, rotMat, tmpMat1, tmpMat2;
 //char *viewMatName; //, *projMatName;
 static vec3 camera, lookAtPoint,
@@ -116,6 +118,10 @@ void zprMouseFunc(int x, int y)
 
         lastX = x;
         lastY = y;
+    }
+    if(_mouseRight){
+      controlBall->x = ((float)x-300)/300 * 4;
+      controlBall->y = (300 - (float)y)/300 * 4;
     }
 }
 
