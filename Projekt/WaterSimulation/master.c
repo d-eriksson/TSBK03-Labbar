@@ -213,7 +213,6 @@ void updateWorld()
         vec3 dX = VectorSub(ScalarMult(particles[i].X,2),particles[i].PX);
         particles[i].PX = particles[i].X;
         particles[i].X = dX;
-			
 	}
 
 	// Collision test keep energy
@@ -249,6 +248,30 @@ void updateWorld()
                 particles[j].PX = VectorSub(particles[j].X, vj);
 
             }
+        }
+        vec3 colNormal = VectorSub(particles[i].X, ControlableParticle.X);
+        float slength = DotProduct(colNormal,colNormal);
+        float length = sqrt(slength);
+        float target = kParticleSize + controlParticleSize;
+
+        if(length < target){
+            // prevois velocity
+            vec3 vi = VectorSub(particles[i].X, particles[i].PX);
+            vec3 vj = VectorSub(ControlableParticle.X, ControlableParticle.PX);
+
+            // resolve overlapping conflict
+            float factor = (length - target)/length;
+            particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor));
+
+            // Compute the projected component factors
+            float fi = ELASTICITY * DotProduct(colNormal,vi) / slength ;
+            float fj = ELASTICITY * DotProduct(colNormal,vj) / slength ;
+
+            // Swap the projected components
+            vi = VectorAdd(vi,VectorSub(ScalarMult(colNormal,fj),ScalarMult(colNormal,fi)));
+
+            // Adjust the previos pos
+            particles[i].PX = VectorSub(particles[i].X, vi);
                 
         }
 
@@ -276,6 +299,9 @@ void updateWorld()
             particles[i].X.z = BOXSIZE - kParticleSize;
         }		
 	}
+
+    ControlableParticle.PX = ControlableParticle.X;
+			
 }
 
 
