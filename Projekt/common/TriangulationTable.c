@@ -293,43 +293,88 @@ int triTable[256][16] =
 vec3 VertexInterp(vec3 p1,vec3 p2){
     return VectorAdd(p1, ScalarMult(VectorSub(p2,p1),0.5));
 }
+void getVertList(vec3 vertlist[12], vec3 vert[8], int cubeindex){
+
+   if (edgeTable[cubeindex] == 0)
+      return;
+   /* Find the vertices where the surface intersects the cube */
+   if (edgeTable[cubeindex] & 1)
+      vertlist[0] =
+         VertexInterp(vert[0],vert[1]);
+   if (edgeTable[cubeindex] & 2)
+      vertlist[1] =
+         VertexInterp(vert[1],vert[2]);
+   if (edgeTable[cubeindex] & 4)
+      vertlist[2] =
+         VertexInterp(vert[2],vert[3]);
+   if (edgeTable[cubeindex] & 8)
+      vertlist[3] =
+         VertexInterp(vert[3],vert[0]);
+   if (edgeTable[cubeindex] & 16)
+      vertlist[4] =
+         VertexInterp(vert[4],vert[5]);
+   if (edgeTable[cubeindex] & 32)
+      vertlist[5] =
+         VertexInterp(vert[5],vert[6]);
+   if (edgeTable[cubeindex] & 64)
+      vertlist[6] =
+         VertexInterp(vert[6],vert[7]);
+   if (edgeTable[cubeindex] & 128)
+      vertlist[7] =
+         VertexInterp(vert[7],vert[4]);
+   if (edgeTable[cubeindex] & 256)
+      vertlist[8] =
+         VertexInterp(vert[0],vert[4]);
+   if (edgeTable[cubeindex] & 512)
+      vertlist[9] =
+         VertexInterp(vert[1],vert[5]);
+   if (edgeTable[cubeindex] & 1024)
+      vertlist[10] =
+         VertexInterp(vert[2],vert[6]);
+   if (edgeTable[cubeindex] & 2048)
+      vertlist[11] =
+         VertexInterp(vert[3],vert[7]);
+}
 vec3 getVertFromEdge(vec3 vert[8], int edge){
     switch(edge){
         case 0:
-            return VectorAdd(vert[0], ScalarMult(VectorSub(vert[1],vert[0]),0.5));
+            return VertexInterp(vert[0], vert[1]);
         break;
         case 1:
-            return VectorAdd(vert[1], ScalarMult(VectorSub(vert[2],vert[1]),0.5));
+            return VertexInterp(vert[1],vert[2]);
         break;
         case 2:
-            return VectorAdd(vert[2], ScalarMult(VectorSub(vert[3],vert[2]),0.5));
+            return VertexInterp(vert[2], vert[3]);
         break;
         case 3:
-            return VectorAdd(vert[3], ScalarMult(VectorSub(vert[0],vert[3]),0.5));
+            return VertexInterp(vert[3], vert[0]);
         break;
         case 4:
-            return VectorAdd(vert[4], ScalarMult(VectorSub(vert[5],vert[4]),0.5));
+            return VertexInterp(vert[4], vert[5]);
         break;
         case 5:
-            return VectorAdd(vert[5], ScalarMult(VectorSub(vert[6],vert[5]),0.5));
+            return VertexInterp(vert[5], vert[6]);
         break;
         case 6:
-            return VectorAdd(vert[6], ScalarMult(VectorSub(vert[7],vert[6]),0.5));
+            return VertexInterp(vert[6], vert[7]);
         break;
         case 7:
-            return VectorAdd(vert[7], ScalarMult(VectorSub(vert[4],vert[7]),0.5));
+            return VertexInterp(vert[7], vert[4]);
         break;
         case 8:
-            return VectorAdd(vert[0], ScalarMult(VectorSub(vert[4],vert[0]),0.5));
+            return VertexInterp(vert[0], vert[4]);
         break;
         case 9:
-            return VectorAdd(vert[1], ScalarMult(VectorSub(vert[5],vert[1]),0.5));
+            return VertexInterp(vert[1], vert[5]);
         break;
         case 10:
-            return VectorAdd(vert[2], ScalarMult(VectorSub(vert[6],vert[2]),0.5));
+            return VertexInterp(vert[2], vert[6]);
+        break;
+        case 11:
+            return VertexInterp(vert[3], vert[7]);
         break;
         default:
-            return VectorAdd(vert[3], ScalarMult(VectorSub(vert[7],vert[3]),0.5));
+            return VertexInterp(vert[3], vert[7]);
         break;
     }
 }

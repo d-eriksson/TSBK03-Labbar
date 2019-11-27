@@ -29,12 +29,13 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.1
+#define kParticleSize 0.075
 #define controlParticleSize 0.5
 #define ELASTICITY 1
-#define BOXSIZE 0.7
-#define RENDERBOXSIZE 4.0
-#define RENDERBALLS true
+#define BOXSIZE 1.0
+#define RENDERBOXSIZE 1.6
+#define RENDERBALLS false
+#define LOG false
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -58,7 +59,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 64}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 75}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -91,7 +92,7 @@ Material particleMt = { { 0.4, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 200}; // Change as desired
+enum {kNumParticles = 800}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -142,7 +143,7 @@ void updateWorld()
 	for (i = 0; i < kNumParticles; i++)
 	{
         // accelerate according to gravity
-        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-1.52,0), deltaT * deltaT));
+        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-3.52,0), deltaT * deltaT));
 
 	}
 
@@ -192,7 +193,7 @@ void updateWorld()
             particles[i].PX.x = particles[i].X.x ;
         }
 
-        if (particles[i].X.y < 0 + kParticleSize){
+        if (particles[i].X.y < 0.0 + kParticleSize){
             particles[i].X.y = kParticleSize;
             particles[i].PX.y = particles[i].X.y ;
         }
@@ -293,7 +294,7 @@ void evaluateGrid(){
     int Nh;
     int Nd;
     float pointSpace = 2*RENDERBOXSIZE/(GridPointsPerDim-1);
-    int subSet = ceil(kParticleSize/pointSpace)+1;
+    int subSet = ceil(2+ kParticleSize/pointSpace);
     resetGrid();
     for(int i = 0; i < kNumParticles; i++){
         Nw = floor((particles[i].X.x + RENDERBOXSIZE)/pointSpace);
@@ -303,7 +304,7 @@ void evaluateGrid(){
             for(int w = Nw-subSet; w <= Nw+subSet; w++){
                 for(int h = Nh-subSet; h <= Nh+subSet; h++){
                     for(int d = Nd-subSet; d <= Nd+subSet; d++){
-                        if(w < GridPointsPerDim &&  w > 0  && h < GridPointsPerDim && h > 0 &&  d < GridPointsPerDim &&  d > 0){
+                        if(w < GridPointsPerDim &&  w >= 0  && h < GridPointsPerDim && h >= 0 &&  d < GridPointsPerDim &&  d >= 0){
                             if(abs(Norm(VectorSub(waterGrid.points[w][h][d].position , particles[i].X))) <= (2*kParticleSize)){
                                 waterGrid.points[w][h][d].value = true;
                             }
@@ -341,9 +342,6 @@ void march(){
     int cubeindex;
     resetBuffers();
     vec3 Temp[8];
-    vec3 t;
-    vec3 t1;
-    vec3 t2;
     for(int w = 0; w < GridPointsPerDim-1; w++ ){
         for(int h = 0; h < GridPointsPerDim-1; h++ ){
             for(int d = 0; d < GridPointsPerDim-1; d++ ){
@@ -366,37 +364,32 @@ void march(){
                 Temp[6] = P6.position;
                 Temp[7] = P7.position;
                 cubeindex = 0;
-                if(P0.value) cubeindex += 1;
-                if(P1.value) cubeindex += 2;
-                if(P2.value) cubeindex += 4;
-                if(P3.value) cubeindex += 8;
-                if(P4.value) cubeindex += 16;
-                if(P5.value) cubeindex += 32;
-                if(P6.value) cubeindex += 64;
-                if(P7.value) cubeindex += 128;
+                if(P0.value) cubeindex |= 1;
+                if(P1.value) cubeindex |= 2;
+                if(P2.value) cubeindex |= 4;
+                if(P3.value) cubeindex |= 8;
+                if(P4.value) cubeindex |= 16;
+                if(P5.value) cubeindex |= 32;
+                if(P6.value) cubeindex |= 64;
+                if(P7.value) cubeindex |= 128;
+                vec3 VertList[12];
 
+                getVertList(VertList, Temp, cubeindex);
                 
                 //printf(" %u \n", cubeindex);
                 for(int i = 0; triTable[cubeindex][i] != -1; i+= 3){
-                    /* THIS IS CAUSING THE ACTUAL ISSUE*/
-                     //printf(" %u \n", 1);
-                    t = getVertFromEdge(Temp, triTable[cubeindex][i]);
-                    t1 = getVertFromEdge(Temp, triTable[cubeindex][i+1]);
-                    t2 = getVertFromEdge(Temp, triTable[cubeindex][i+2]);
-                    if(t.x == 0.0){
-                         printf(" %u ZERO \n", vertices);
-                    }
-                    Vertex_Array_Buffer_Water[vertices*3+i] = t.x;
-                    Vertex_Array_Buffer_Water[vertices*3+i+1] = t.y;
-                    Vertex_Array_Buffer_Water[vertices*3+i+2] = t.z;
 
-                    Vertex_Array_Buffer_Water[(vertices+1)*3+i] = t1.x;
-                    Vertex_Array_Buffer_Water[(vertices+1)*3+i+1] = t1.y;
-                    Vertex_Array_Buffer_Water[(vertices+1)*3+i+2] = t1.z;
+                    Vertex_Array_Buffer_Water[vertices*3] = VertList[triTable[cubeindex][i]].x;
+                    Vertex_Array_Buffer_Water[vertices*3+1] = VertList[triTable[cubeindex][i]].y;
+                    Vertex_Array_Buffer_Water[vertices*3+2] = VertList[triTable[cubeindex][i]].z;
 
-                    Vertex_Array_Buffer_Water[(vertices+2)*3+i] = t2.x;
-                    Vertex_Array_Buffer_Water[(vertices+2)*3+i+1] = t2.y;
-                    Vertex_Array_Buffer_Water[(vertices+2)*3+i+2] = t2.z;
+                    Vertex_Array_Buffer_Water[(vertices+1)*3] = VertList[triTable[cubeindex][i+1]].x;
+                    Vertex_Array_Buffer_Water[(vertices+1)*3+1] = VertList[triTable[cubeindex][i+1]].y;
+                    Vertex_Array_Buffer_Water[(vertices+1)*3+2] = VertList[triTable[cubeindex][i+1]].z;
+                    
+                    Vertex_Array_Buffer_Water[(vertices+2)*3] = VertList[triTable[cubeindex][i+2]].x;
+                    Vertex_Array_Buffer_Water[(vertices+2)*3+1] = VertList[triTable[cubeindex][i+2]].y;
+                    Vertex_Array_Buffer_Water[(vertices+2)*3+2] = VertList[triTable[cubeindex][i+2]].z;
                     
                     Index_Array_Buffer_Water[vertices]= vertices;
                     Index_Array_Buffer_Water[vertices+1]= vertices+1;
@@ -406,6 +399,27 @@ void march(){
                 }
             }
         }
+    }
+    Vertex_Array_Buffer_Water = realloc(Vertex_Array_Buffer_Water,vertices*3*sizeof(GLfloat) );
+    Index_Array_Buffer_Water = realloc(Index_Array_Buffer_Water,vertices*sizeof(GLuint) );
+    if(LOG){
+    printf("START\n");
+    for(int i = 0; i < vertices; i+=3){
+        printf("Triangle (%u): ", i/3);
+        printf(" %u ", Index_Array_Buffer_Water[i]);
+        printf(" %u ", Index_Array_Buffer_Water[i+1]);
+        printf(" %u \n", Index_Array_Buffer_Water[i+2]);
+    }
+    for(int i = 0; i < vertices*3; i+=3){
+        printf("Vertex (%u): ", i /3);
+        printf(" %f ", Vertex_Array_Buffer_Water[i]);
+        printf(" %f ", Vertex_Array_Buffer_Water[i+1]);
+        printf(" %f \n", Vertex_Array_Buffer_Water[i+2]);
+        if((i/3 +1 )%3 ==0 && i != 0){
+            printf("\n");
+        }
+    }
+    printf("END\n %u  \n", vertices);
     }
 }
 
@@ -419,7 +433,7 @@ void init()
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glCullFace(GL_FRONT_AND_BACK);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -469,7 +483,7 @@ void display(void)
 
     
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
@@ -480,12 +494,13 @@ void display(void)
         transMatrix = T(0.0, 0.0, 0.0); // position
         tmpMatrix = Mult(viewMatrix, transMatrix);
         glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
-        loadMaterial(ControlableParticleMt);
+        loadMaterial(particleMt);
         DrawModel(Water, shader, "in_Position", "in_Normal", NULL);
     }
     printError("uploading to shader");
 
     renderParticle(ControlableParticle.X, ControlableParticleMt, controlParticleSize/0.1);
+    
     if(RENDERBALLS){
         for (int i = 0; i < kNumParticles; i++){
             renderParticle(particles[i].X, particleMt, kParticleSize/0.1);
