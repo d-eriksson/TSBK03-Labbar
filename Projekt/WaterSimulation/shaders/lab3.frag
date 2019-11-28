@@ -6,7 +6,7 @@ in vec3 out_Normal;
 in vec3 lightPos[4];
 
 uniform int objID;
-
+const float Eta = 0.15;
 uniform vec4 diffColor;
 uniform float shininess;
 
@@ -27,13 +27,14 @@ vec4 calculateLighting()
     vec3 camDir = normalize(/*camPos*/-pixPos);
 
     lightDir = normalize(light);
+    
 
     refl = normalize(-reflect(lightDir, normal));
 
     diffuse = max(dot(lightDir, normal), 0.0);
 
     specular = pow( max(dot(refl, camDir), 0.0), 100);
-
+    
     color = vec3(ambient + 0.6*diffuse + 1.0*specular);
 
     return vec4(color, 1.0);

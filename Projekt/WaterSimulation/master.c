@@ -33,7 +33,7 @@
 #define controlParticleSize 0.5
 #define ELASTICITY 1
 #define BOXSIZE 1.0
-#define RENDERBOXSIZE 1.6
+#define RENDERBOXSIZE 2.6
 #define RENDERBALLS false
 #define LOG false
 
@@ -59,7 +59,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 75}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 64}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -84,7 +84,7 @@ typedef struct
     ka, kd, ks, shininess;  // coefficients and specular exponent
 } Material;
 
-Material particleMt = { { 0.4, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
+Material particleMt = { { 0.2, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                     0.1, 0.6, 1.0, 50
                 },
         ControlableParticleMt= { { 1.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
@@ -92,7 +92,7 @@ Material particleMt = { { 0.4, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 800}; // Change as desired
+enum {kNumParticles = 600}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -103,6 +103,7 @@ GRID waterGrid;
 int tempVertices[16];
 GLfloat deltaT, currentTime;
 GLfloat* Vertex_Array_Buffer_Water;
+GLfloat* Normal_Array_Buffer_Water;
 GLuint* Index_Array_Buffer_Water;
 int vertices;
 Model* Water;
@@ -126,6 +127,7 @@ vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
 void resetBuffers(){
     Vertex_Array_Buffer_Water = (GLfloat*) malloc(2*12*pow(GridPointsPerDim,3)*sizeof(GLfloat));
     Index_Array_Buffer_Water = (GLuint*) malloc(2*4*pow(GridPointsPerDim,3)*sizeof(GLuint));
+    Normal_Array_Buffer_Water = (GLfloat*) malloc(2*12*pow(GridPointsPerDim,3)*sizeof(GLfloat));
     vertices = 0;
 }
 void loadMaterial(Material mt)
@@ -331,7 +333,7 @@ void evaluateGrid(){
                 for(int h = Nh-subSet; h <= Nh+subSet; h++){
                     for(int d = Nd-subSet; d <= Nd+subSet; d++){
                         if(w < GridPointsPerDim &&  w >= 0  && h < GridPointsPerDim && h >= 0 &&  d < GridPointsPerDim &&  d >= 0){
-                            if(abs(Norm(VectorSub(waterGrid.points[w][h][d].position , particles[i].X))) <= (2*kParticleSize)){
+                            if(abs(Norm(VectorSub(waterGrid.points[w][h][d].position , particles[i].X))) <= (2.2*kParticleSize)){
                                 waterGrid.points[w][h][d].value = true;
                             }
                         }
@@ -416,6 +418,21 @@ void march(){
                     Vertex_Array_Buffer_Water[(vertices+2)*3] = VertList[triTable[cubeindex][i+2]].x;
                     Vertex_Array_Buffer_Water[(vertices+2)*3+1] = VertList[triTable[cubeindex][i+2]].y;
                     Vertex_Array_Buffer_Water[(vertices+2)*3+2] = VertList[triTable[cubeindex][i+2]].z;
+
+                    vec3 Normal = CalcNormalVector(VertList[triTable[cubeindex][i]],VertList[triTable[cubeindex][i+1]],VertList[triTable[cubeindex][i+2]]);
+
+                    
+                    Normal_Array_Buffer_Water[vertices*3] = Normal.x;
+                    Normal_Array_Buffer_Water[vertices*3+1] = Normal.y;
+                    Normal_Array_Buffer_Water[vertices*3+2] = Normal.z;
+
+                    Normal_Array_Buffer_Water[(vertices+1)*3] = Normal.x;
+                    Normal_Array_Buffer_Water[(vertices+1)*3+1] = Normal.y;
+                    Normal_Array_Buffer_Water[(vertices+1)*3+2] = Normal.z;
+                    
+                    Normal_Array_Buffer_Water[(vertices+2)*3] = Normal.x;
+                    Normal_Array_Buffer_Water[(vertices+2)*3+1] = Normal.y;
+                    Normal_Array_Buffer_Water[(vertices+2)*3+2] = Normal.z;
                     
                     Index_Array_Buffer_Water[vertices]= vertices;
                     Index_Array_Buffer_Water[vertices+1]= vertices+1;
@@ -426,8 +443,8 @@ void march(){
             }
         }
     }
-    Vertex_Array_Buffer_Water = realloc(Vertex_Array_Buffer_Water,vertices*3*sizeof(GLfloat) );
-    Index_Array_Buffer_Water = realloc(Index_Array_Buffer_Water,vertices*sizeof(GLuint) );
+    //Vertex_Array_Buffer_Water = realloc(Vertex_Array_Buffer_Water,vertices*3*sizeof(GLfloat) );
+    //Index_Array_Buffer_Water = realloc(Index_Array_Buffer_Water,vertices*sizeof(GLuint) );
     if(LOG){
     printf("START\n");
     for(int i = 0; i < vertices; i+=3){
@@ -516,7 +533,7 @@ void display(void)
     if(!RENDERBALLS){
         evaluateGrid();
         march();
-        Water = LoadDataToModel(Vertex_Array_Buffer_Water,NULL,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
+        Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
         transMatrix = T(0.0, 0.0, 0.0); // position
         tmpMatrix = Mult(viewMatrix, transMatrix);
         glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
