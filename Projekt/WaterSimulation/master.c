@@ -29,11 +29,11 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.075
+#define kParticleSize 0.02
 #define controlParticleSize 0.5
 #define ELASTICITY 1
-#define BOXSIZE 1.0
-#define RENDERBOXSIZE 2.6
+#define BOXSIZE 0.7
+#define RENDERBOXSIZE 1.0
 #define RENDERBALLS false
 #define LOG false
 
@@ -84,7 +84,7 @@ typedef struct
     ka, kd, ks, shininess;  // coefficients and specular exponent
 } Material;
 
-Material particleMt = { { 0.2, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
+Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                     0.1, 0.6, 1.0, 50
                 },
         ControlableParticleMt= { { 1.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
@@ -92,7 +92,7 @@ Material particleMt = { { 0.2, 0.4, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 600}; // Change as desired
+enum {kNumParticles = 1000}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -102,9 +102,12 @@ Particle ControlableParticle;
 GRID waterGrid;
 int tempVertices[16];
 GLfloat deltaT, currentTime;
+GLfloat* Vertex_Array;
 GLfloat* Vertex_Array_Buffer_Water;
+GLfloat* Normal_Array;
 GLfloat* Normal_Array_Buffer_Water;
 GLuint* Index_Array_Buffer_Water;
+GLuint* Index_Array;
 int vertices;
 Model* Water;
 
@@ -125,7 +128,6 @@ vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
 
 //----------------------------------Utility functions-----------------------------------
 void resetBuffers(){
-    Vertex_Array_Buffer_Water = (GLfloat*) malloc(2*12*pow(GridPointsPerDim,3)*sizeof(GLfloat));
     Index_Array_Buffer_Water = (GLuint*) malloc(2*4*pow(GridPointsPerDim,3)*sizeof(GLuint));
     Normal_Array_Buffer_Water = (GLfloat*) malloc(2*12*pow(GridPointsPerDim,3)*sizeof(GLfloat));
     vertices = 0;
@@ -135,7 +137,6 @@ void loadMaterial(Material mt)
     glUniform4fv(glGetUniformLocation(shader, "diffColor"), 1, &mt.diffColor[0]);
     glUniform1fv(glGetUniformLocation(shader, "shininess"), 1, &mt.shininess);
 }
-
 //---------------------------------- physics update and billiard table rendering ----------------------------------
 void updateWorld()
 {
@@ -337,7 +338,6 @@ void evaluateGrid(){
                                 waterGrid.points[w][h][d].value = true;
                             }
                         }
-
                     }
                 }
             }
@@ -366,10 +366,79 @@ void createGrid(){
         }
     }
 }
+void preAllocateVertices(){
+    int index = 0;
+    vec3 temp1;
+    vec3 temp2;
+    vec3 temp3;
+
+    Vertex_Array = (GLfloat*) malloc(9*pow(GridPointsPerDim,3)*sizeof(GLfloat));
+    Normal_Array = (GLfloat*) malloc(9*pow(GridPointsPerDim,3)*sizeof(GLfloat));
+    for(int w = 0; w < GridPointsPerDim; w++ ){
+        for(int h = 0; h < GridPointsPerDim; h++ ){
+            for(int d = 0; d < GridPointsPerDim; d++ ){
+                if(w >= GridPointsPerDim-1){ // Last point in width
+                    temp1 = SetVector(0,0,0);
+                }
+                else{
+                    temp1 = VertexInterp(waterGrid.points[w][h][d].position,waterGrid.points[w+1][h][d].position);
+                }
+                if(h >= GridPointsPerDim-1){ // Last point in height
+                    temp2 = SetVector(0,0,0);
+                }
+                else{
+                    temp2 = VertexInterp(waterGrid.points[w][h][d].position,waterGrid.points[w][h+1][d].position);
+                }
+                if(d >= GridPointsPerDim-1){
+                    temp3 = SetVector(0,0,0);
+                }
+                else{
+                    temp3 = VertexInterp(waterGrid.points[w][h][d].position,waterGrid.points[w][h][d+1].position);
+                }
+                
+                Vertex_Array[index ] = temp1.x;
+                Vertex_Array[index +1] = temp1.y;
+                Vertex_Array[index +2] = temp1.z;
+
+                Vertex_Array[index +3] = temp2.x;
+                Vertex_Array[index +4] = temp2.y;
+                Vertex_Array[index +5] = temp2.z;
+
+                Vertex_Array[index +6] = temp3.x;
+                Vertex_Array[index +7] = temp3.y;
+                Vertex_Array[index +8] = temp3.z;
+
+                Normal_Array[index ] = 0.0f;
+                Normal_Array[index +1] = 0.0f;
+                Normal_Array[index +2] = 0.0f;
+
+                Normal_Array[index +3] =  0.0f;
+                Normal_Array[index +4] =  0.0f;
+                Normal_Array[index +5] =  0.0f;
+
+                Normal_Array[index +6] =  0.0f;
+                Normal_Array[index +7] =  0.0f;
+                Normal_Array[index +8] =  0.0f;
+
+
+                index +=9;
+
+            }
+        }
+    }
+}
 void march(){
     int cubeindex;
-    resetBuffers();
-    vec3 Temp[8];
+    int tempIdx1;
+    int tempIdx2;
+    int tempIdx3;
+
+    vec3 temp1;
+    vec3 temp2;
+    vec3 temp3;
+
+    Index_Array = (GLuint*) malloc(2*4*pow(GridPointsPerDim,3)*sizeof(GLuint));
+    vertices= 0;
     for(int w = 0; w < GridPointsPerDim-1; w++ ){
         for(int h = 0; h < GridPointsPerDim-1; h++ ){
             for(int d = 0; d < GridPointsPerDim-1; d++ ){
@@ -382,15 +451,7 @@ void march(){
                 GRIDPOINT P5 = waterGrid.points[w+1][h+1][d];
                 GRIDPOINT P6 = waterGrid.points[w+1][h+1][d+1];
                 GRIDPOINT P7 = waterGrid.points[w][h+1][d+1];
-                
-                Temp[0] = P0.position;
-                Temp[1] = P1.position;
-                Temp[2] = P2.position;
-                Temp[3] = P3.position;
-                Temp[4] = P4.position;
-                Temp[5] = P5.position;
-                Temp[6] = P6.position;
-                Temp[7] = P7.position;
+
                 cubeindex = 0;
                 if(P0.value) cubeindex |= 1;
                 if(P1.value) cubeindex |= 2;
@@ -400,14 +461,13 @@ void march(){
                 if(P5.value) cubeindex |= 32;
                 if(P6.value) cubeindex |= 64;
                 if(P7.value) cubeindex |= 128;
-                vec3 VertList[12];
+                //vec3 VertList[12];
 
-                getVertList(VertList, Temp, cubeindex);
-                
+                //getVertList(VertList, Temp, cubeindex);
                 //printf(" %u \n", cubeindex);
                 for(int i = 0; triTable[cubeindex][i] != -1; i+= 3){
 
-                    Vertex_Array_Buffer_Water[vertices*3] = VertList[triTable[cubeindex][i]].x;
+                    /*Vertex_Array_Buffer_Water[vertices*3] = VertList[triTable[cubeindex][i]].x;
                     Vertex_Array_Buffer_Water[vertices*3+1] = VertList[triTable[cubeindex][i]].y;
                     Vertex_Array_Buffer_Water[vertices*3+2] = VertList[triTable[cubeindex][i]].z;
 
@@ -432,19 +492,84 @@ void march(){
                     
                     Normal_Array_Buffer_Water[(vertices+2)*3] = Normal.x;
                     Normal_Array_Buffer_Water[(vertices+2)*3+1] = Normal.y;
-                    Normal_Array_Buffer_Water[(vertices+2)*3+2] = Normal.z;
+                    Normal_Array_Buffer_Water[(vertices+2)*3+2] = Normal.z;*/
+
+                    tempIdx1 = getVertIndex(w, h, d, triTable[cubeindex][i],GridPointsPerDim);
+                    tempIdx2 = getVertIndex(w, h, d, triTable[cubeindex][i+1], GridPointsPerDim);
+                    tempIdx3 =  getVertIndex(w, h, d, triTable[cubeindex][i+2], GridPointsPerDim);
+
+                    temp1 = SetVector(Vertex_Array[3*tempIdx1],Vertex_Array[3*tempIdx1+1],Vertex_Array[3*tempIdx1+2]);
+                    temp2 = SetVector(Vertex_Array[3*tempIdx2],Vertex_Array[3*tempIdx2+1],Vertex_Array[3*tempIdx2+2]);
+                    temp3 = SetVector(Vertex_Array[3*tempIdx3],Vertex_Array[3*tempIdx3+1],Vertex_Array[3*tempIdx3+2]);
+
+                    vec3 Normal = CalcNormalVector(temp1,temp2,temp3);
+  
+
+                    Normal_Array[3*tempIdx1] += Normal.x;
+                    Normal_Array[3*tempIdx1 +1] += Normal.y;
+                    Normal_Array[3*tempIdx1 +2] += Normal.z;
+
+                    Normal_Array[3*tempIdx2] += Normal.x;
+                    Normal_Array[3*tempIdx2 +1] += Normal.y;
+                    Normal_Array[3*tempIdx2 +2] += Normal.z;
+
+                    Normal_Array[3*tempIdx3] += Normal.x;
+                    Normal_Array[3*tempIdx3 +1] += Normal.y;
+                    Normal_Array[3*tempIdx3 +2] += Normal.z;
                     
-                    Index_Array_Buffer_Water[vertices]= vertices;
-                    Index_Array_Buffer_Water[vertices+1]= vertices+1;
-                    Index_Array_Buffer_Water[vertices+2]= vertices+2;
+                    Index_Array[vertices] = tempIdx1;
+                    Index_Array[vertices+1] = tempIdx2;
+                    Index_Array[vertices+2] = tempIdx3;
                     
                     vertices+=3;
                 }
             }
         }
     }
-    //Vertex_Array_Buffer_Water = realloc(Vertex_Array_Buffer_Water,vertices*3*sizeof(GLfloat) );
-    //Index_Array_Buffer_Water = realloc(Index_Array_Buffer_Water,vertices*sizeof(GLuint) );
+    int vertCounter = 0;
+    Vertex_Array_Buffer_Water = realloc(Vertex_Array_Buffer_Water,vertices*3*sizeof(GLfloat) );
+    Index_Array_Buffer_Water = realloc(Index_Array_Buffer_Water,vertices*sizeof(GLuint) );
+    Normal_Array_Buffer_Water = realloc(Normal_Array_Buffer_Water, vertices*3*sizeof(GLfloat));
+    for(int i = 0; i < vertices; i+=3){
+        Vertex_Array_Buffer_Water[vertCounter] = Vertex_Array[3*Index_Array[i]];
+        Vertex_Array_Buffer_Water[vertCounter + 1] = Vertex_Array[3*Index_Array[i]+1];
+        Vertex_Array_Buffer_Water[vertCounter + 2] = Vertex_Array[3*Index_Array[i]+2];
+
+        Vertex_Array_Buffer_Water[vertCounter + 3] = Vertex_Array[3*Index_Array[i+1]];
+        Vertex_Array_Buffer_Water[vertCounter + 4] = Vertex_Array[3*Index_Array[i+1]+1];
+        Vertex_Array_Buffer_Water[vertCounter + 5] = Vertex_Array[3*Index_Array[i+1]+2];
+
+        Vertex_Array_Buffer_Water[vertCounter + 6] = Vertex_Array[3*Index_Array[i+2]];
+        Vertex_Array_Buffer_Water[vertCounter + 7] = Vertex_Array[3*Index_Array[i+2]+1];
+        Vertex_Array_Buffer_Water[vertCounter + 8] = Vertex_Array[3*Index_Array[i+2]+2];
+
+        Index_Array_Buffer_Water[i] = i;
+        Index_Array_Buffer_Water[i+1] = i+1;
+        Index_Array_Buffer_Water[i+2] = i+2;
+
+        vec3 Normal;
+        Normal = SetVector(Normal_Array[3*Index_Array[i]],Normal_Array[3*Index_Array[i]+1],Normal_Array[3*Index_Array[i]+2]);
+        
+        Normal = Normalize(Normal);
+        Normal_Array_Buffer_Water[vertCounter] =  Normal.x;
+        Normal_Array_Buffer_Water[vertCounter+1] = Normal.y;
+        Normal_Array_Buffer_Water[vertCounter+2] = Normal.z;
+
+        Normal = SetVector(Normal_Array[3*Index_Array[i+1]],Normal_Array[3*Index_Array[i+1]+1],Normal_Array[3*Index_Array[i+1]+2]);
+        Normal = Normalize(Normal);
+        Normal_Array_Buffer_Water[vertCounter+3] =  Normal.x;
+        Normal_Array_Buffer_Water[vertCounter+4] = Normal.y;
+        Normal_Array_Buffer_Water[vertCounter+5] = Normal.z;
+
+        Normal = SetVector(Normal_Array[3*Index_Array[i+2]],Normal_Array[3*Index_Array[i+2]+1],Normal_Array[3*Index_Array[i+2]+2]);
+        Normal = Normalize(Normal);
+        Normal_Array_Buffer_Water[vertCounter+6] =  Normal.x;
+        Normal_Array_Buffer_Water[vertCounter+7] = Normal.y;
+        Normal_Array_Buffer_Water[vertCounter+8] = Normal.z;
+        
+        vertCounter+=9;
+    }
+    
     if(LOG){
     printf("START\n");
     for(int i = 0; i < vertices; i+=3){
@@ -469,7 +594,7 @@ void march(){
 void init()
 {
 	dumpInfo();
-	// GL inits
+	// GL initss
     resetBuffers();
 	glClearColor(0.4, 0.4, 0.4, 0);
 	glClearDepth(1.0);
@@ -488,6 +613,7 @@ void init()
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
     
+    preAllocateVertices();
     projectionMatrix = perspective(90, 1.0, 0.1, 1000); // It would be silly to upload an uninitialized matrix
     glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 
