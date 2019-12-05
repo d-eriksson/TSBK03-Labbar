@@ -335,6 +335,49 @@ void getVertList(vec3 vertlist[12], vec3 vert[8], int cubeindex){
       vertlist[11] =
          VertexInterp(vert[3],vert[7]);
 }
+int getVertIndex(int w, int h, int d, int edge, int dims){
+    switch(edge){
+        case 0:
+            return 3*(w*dims*dims + h*dims + d);
+        break;
+        case 1:
+            return 3*((w+1)*dims*dims + h*dims + d)+2;
+        break;
+        case 2:
+            return 3*((w)*dims*dims + h*dims + d+1);
+        break;
+        case 3:
+            return 3*((w)*dims*dims + h*dims + d)+2;
+        break;
+        case 4:
+            return 3*((w)*dims*dims + (h+1)*dims + d);
+        break;
+        case 5:
+            return 3*((w+1)*dims*dims + (h+1)*dims + d)+2;
+        break;
+        case 6:
+            return 3*((w)*dims*dims + (h+1)*dims + d+1);
+        break;
+        case 7:
+            return 3*((w)*dims*dims + (h+1)*dims + d)+2;
+        break;
+        case 8:
+            return 3*((w)*dims*dims + (h)*dims + d)+1;
+        break;
+        case 9:
+            return 3*((w+1)*dims*dims + (h)*dims + d)+1;
+        break;
+        case 10:
+            return 3*((w+1)*dims*dims + (h)*dims + d+1)+1;
+        break;
+        case 11:
+            return 3*((w)*dims*dims + (h)*dims + d+1)+1;
+        break;
+        default:
+            return 3*((w)*dims*dims + (h)*dims + d)+1;
+        break;
+    }
+}
 vec3 getVertFromEdge(vec3 vert[8], int edge){
     switch(edge){
         case 0:
