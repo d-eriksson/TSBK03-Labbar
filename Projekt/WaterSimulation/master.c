@@ -20,6 +20,8 @@
 #include "LoadTGA.h"
 #include "zpr.h"
 #include "TriangulationTable.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 // initial width and heights
 #define W 600
@@ -29,7 +31,7 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.02
+#define kParticleSize 0.05
 #define controlParticleSize 0.5
 #define ELASTICITY 1
 #define BOXSIZE 0.7
@@ -59,7 +61,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 64}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 16}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -92,7 +94,7 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 1000}; // Change as desired
+enum {kNumParticles = 100}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -110,10 +112,11 @@ GLuint* Index_Array_Buffer_Water;
 GLuint* Index_Array;
 int vertices;
 Model* Water;
+Model* skybox;
 
 vec3 cam, point;
 
-GLuint shader = 0;
+GLuint shader = 0, skyboxShader = 0. waterShader = 0;
 GLint lastw = W, lasth = H;  // for resizing
 //-----------------------------matrices------------------------------
 mat4 projectionMatrix,
@@ -124,6 +127,69 @@ vec3 lightSourcesColorArr[] = { {1.0f, 1.0f, 1.0f} }; // White light
 GLfloat specularExponent[] = {50.0};
 GLint directional[] = {0};
 vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
+
+//-----------------------------------skybox-------------
+float skyboxVert[] = {
+	-2.0f, -2.0f, -2.0f,
+	2.0f, -2.0f, -2.0f,
+	2.0f, -2.0f, 2.0f,
+	-2.0f, -2.0f, 2.0f,
+	-2.0f, 2.0f, -2.0f,
+	2.0f, 2.0f, -2.0f,
+	2.0f, 2.0f, 2.0f,
+	-2.0f, 2.0f, 2.0f
+
+};
+
+unsigned int skyboxIndices[] = {
+	0,1,5,
+	0,5,4,
+	0,4,7,
+    0,7,3,
+	0,3,2,
+	0,2,1,
+    6,4,5,
+	6,7,4,
+	6,2,3,
+	6,3,7,
+	6,5,1,
+	6,1,2,
+	
+};
+
+unsigned int cubemapTexture;
+
+unsigned int loadCubemap(char faces[6][15])
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < 6; i++)
+    {
+        unsigned char *data = stbi_load(faces[i], &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}  
+
 
 
 //----------------------------------Utility functions-----------------------------------
@@ -461,38 +527,8 @@ void march(){
                 if(P5.value) cubeindex |= 32;
                 if(P6.value) cubeindex |= 64;
                 if(P7.value) cubeindex |= 128;
-                //vec3 VertList[12];
-
-                //getVertList(VertList, Temp, cubeindex);
-                //printf(" %u \n", cubeindex);
+                
                 for(int i = 0; triTable[cubeindex][i] != -1; i+= 3){
-
-                    /*Vertex_Array_Buffer_Water[vertices*3] = VertList[triTable[cubeindex][i]].x;
-                    Vertex_Array_Buffer_Water[vertices*3+1] = VertList[triTable[cubeindex][i]].y;
-                    Vertex_Array_Buffer_Water[vertices*3+2] = VertList[triTable[cubeindex][i]].z;
-
-                    Vertex_Array_Buffer_Water[(vertices+1)*3] = VertList[triTable[cubeindex][i+1]].x;
-                    Vertex_Array_Buffer_Water[(vertices+1)*3+1] = VertList[triTable[cubeindex][i+1]].y;
-                    Vertex_Array_Buffer_Water[(vertices+1)*3+2] = VertList[triTable[cubeindex][i+1]].z;
-                    
-                    Vertex_Array_Buffer_Water[(vertices+2)*3] = VertList[triTable[cubeindex][i+2]].x;
-                    Vertex_Array_Buffer_Water[(vertices+2)*3+1] = VertList[triTable[cubeindex][i+2]].y;
-                    Vertex_Array_Buffer_Water[(vertices+2)*3+2] = VertList[triTable[cubeindex][i+2]].z;
-
-                    vec3 Normal = CalcNormalVector(VertList[triTable[cubeindex][i]],VertList[triTable[cubeindex][i+1]],VertList[triTable[cubeindex][i+2]]);
-
-                    
-                    Normal_Array_Buffer_Water[vertices*3] = Normal.x;
-                    Normal_Array_Buffer_Water[vertices*3+1] = Normal.y;
-                    Normal_Array_Buffer_Water[vertices*3+2] = Normal.z;
-
-                    Normal_Array_Buffer_Water[(vertices+1)*3] = Normal.x;
-                    Normal_Array_Buffer_Water[(vertices+1)*3+1] = Normal.y;
-                    Normal_Array_Buffer_Water[(vertices+1)*3+2] = Normal.z;
-                    
-                    Normal_Array_Buffer_Water[(vertices+2)*3] = Normal.x;
-                    Normal_Array_Buffer_Water[(vertices+2)*3+1] = Normal.y;
-                    Normal_Array_Buffer_Water[(vertices+2)*3+2] = Normal.z;*/
 
                     tempIdx1 = getVertIndex(w, h, d, triTable[cubeindex][i],GridPointsPerDim);
                     tempIdx2 = getVertIndex(w, h, d, triTable[cubeindex][i+1], GridPointsPerDim);
@@ -601,7 +637,7 @@ void init()
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT_AND_BACK);
+	//glCullFace(GL_BACK);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -609,13 +645,17 @@ void init()
     printError("GL inits");
     createGrid();
     // Load shader
+    skyboxShader = loadShaders("shaders/skybox.vert", "shaders/skybox.frag");
     shader = loadShaders("shaders/lab3.vert", "shaders/lab3.frag");
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
     
     preAllocateVertices();
     projectionMatrix = perspective(90, 1.0, 0.1, 1000); // It would be silly to upload an uninitialized matrix
+    glUseProgram(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    glUseProgram(skyboxShader);
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 
     // Initialize ball data, positions etc
     float ParticleMargin = 0.0001;
@@ -637,6 +677,17 @@ void init()
     point = SetVector(0, 0, 0);
     zprInit(&viewMatrix, cam, point, &ControlableParticle.X );  // camera controls
 
+    char faces[6][15] =
+    {
+        "right.jpg",
+        "left.jpg",
+        "top.jpg",
+        "bottom.jpg",
+        "front.jpg",
+        "back.jpg"
+    };
+    cubemapTexture = loadCubemap(faces);  
+
     resetElapsedTime();
 }
 
@@ -652,10 +703,12 @@ void display(void)
 
     
     glEnable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
+    glUseProgram(shader);
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
     if(!RENDERBALLS){
         evaluateGrid();
         march();
@@ -675,6 +728,16 @@ void display(void)
             renderParticle(particles[i].X, particleMt, kParticleSize/0.1);
         }
     }
+
+    glUseProgram(skyboxShader);
+    glDepthFunc(GL_LEQUAL);
+    skybox = LoadDataToModel(skyboxVert,NULL,NULL,NULL,skyboxIndices,8,36);
+    transMatrix = S(1.0, 1.0, 1.0); // position
+    tmpMatrix = Mult(viewMatrix, transMatrix);
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    DrawModel(skybox, skyboxShader, "in_Position", NULL, NULL);
+    glDepthFunc(GL_LESS);
 	
 
     printError("rendering");
@@ -699,7 +762,6 @@ void reshape(GLsizei w, GLsizei h)
     glViewport(0, 0, w, h);
     GLfloat ratio = (GLfloat) w / (GLfloat) h;
     projectionMatrix = perspective(90, ratio, 0.1, 1000);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 }
 
 //-----------------------------main-----------------------------------------------
