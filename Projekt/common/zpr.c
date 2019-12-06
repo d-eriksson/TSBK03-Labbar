@@ -36,6 +36,9 @@ static int lastX = 300, lastY = 300;
 static vec3 *controlBall;
 
 //------------------------------------------------------------------------------
+vec3 getCamera(){
+  return camera;
+}
 
 void updateCameraMatrix(mat4 *matrix)
 {

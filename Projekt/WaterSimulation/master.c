@@ -116,7 +116,7 @@ Model* skybox;
 
 vec3 cam, point;
 
-GLuint shader = 0, skyboxShader = 0. waterShader = 0;
+GLuint shader = 0, skyboxShader = 0, waterShader = 0;
 GLint lastw = W, lasth = H;  // for resizing
 //-----------------------------matrices------------------------------
 mat4 projectionMatrix,
@@ -646,6 +646,7 @@ void init()
     createGrid();
     // Load shader
     skyboxShader = loadShaders("shaders/skybox.vert", "shaders/skybox.frag");
+    waterShader = loadShaders("shaders/water.vert", "shaders/water.frag");
     shader = loadShaders("shaders/lab3.vert", "shaders/lab3.frag");
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
@@ -656,6 +657,8 @@ void init()
     glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
     glUseProgram(skyboxShader);
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    glUseProgram(waterShader);
+    glUniformMatrix4fv(glGetUniformLocation(waterShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 
     // Initialize ball data, positions etc
     float ParticleMargin = 0.0001;
@@ -706,21 +709,23 @@ void display(void)
     //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
-    glUseProgram(shader);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    
     if(!RENDERBALLS){
+        glUseProgram(waterShader);
+
         evaluateGrid();
         march();
         Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
         transMatrix = T(0.0, 0.0, 0.0); // position
         tmpMatrix = Mult(viewMatrix, transMatrix);
-        glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
-        loadMaterial(particleMt);
-        DrawModel(Water, shader, "in_Position", "in_Normal", NULL);
+        glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+        glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
+        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL);
     }
     printError("uploading to shader");
 
+    glUseProgram(shader);
+    glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
     renderParticle(ControlableParticle.X, ControlableParticleMt, controlParticleSize/0.1);
     
     if(RENDERBALLS){
