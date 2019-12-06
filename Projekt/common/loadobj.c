@@ -1308,6 +1308,95 @@ Model* LoadModelPlus(char* name/*,
 	
 	return m;
 }
+Model* BoxModel(float width, float height, float depth, float x, float y, float z ){
+	GLfloat vertices[]={
+		x-width, y-height, z-depth, //0 BACK
+		x-width, y-height, z-depth, // BOTTOM -1
+		x-width, y-height, z-depth, // LEFT -2
+
+		x+width, y-height, z-depth, //1 BACK -3
+		x+width, y-height, z-depth, // BOTTOM -4
+		x+width, y-height, z-depth, // RIGHT -5
+
+		x+width, y-height, z+depth, //2 FRONT -6
+		x+width, y-height, z+depth, // BOTTOM -7
+		x+width, y-height, z+depth, // RIGHT -8
+
+		x-width, y-height, z+depth, //3 FRONT -9
+		x-width, y-height, z+depth, // BOTTOM -10 
+		x-width, y-height, z+depth, // LEFT -11
+
+		x-width, y+height, z-depth, //4 BACK - 12
+		x-width, y+height, z-depth, // TOP -13
+		x-width, y+height, z-depth, // LEFT -14
+
+		x+width, y+height, z-depth, //5 BACK -15
+		x+width, y+height, z-depth, // TOP -16 
+		x+width, y+height, z-depth, // RIGHT -17
+
+		x+width, y+height, z+depth, //6 FRONT -18
+		x+width, y+height, z+depth, // TOP -19
+		x+width, y+height, z+depth, // RIGHT -20
+
+		x-width, y+height, z+depth, //7 FRONT -21
+		x-width, y+height, z+depth, // TOP -22
+		x-width, y+height, z+depth // LEFT -23
+	};
+	GLfloat normals[]={
+		0.0,0.0,-1.0,
+		0.0,-1.0,0.0,
+		-1.0,0.0,0.0,
+
+		0.0,0.0,-1.0,
+		0.0,-1.0,0.0,
+		1.0,0.0, 0.0,
+
+		0.0,0.0, 1.0,
+		0.0,-1.0,0.0,
+		1.0,0.0, 0.0,
+
+		0.0,0.0, 1.0,
+		0.0,-1.0,0.0,
+		-1.0,0.0,0.0,
+
+		0.0,0.0,-1.0,
+		0.0, 1.0,0.0,
+		-1.0,0.0,0.0,
+
+		0.0,0.0,-1.0,
+		0.0, 1.0,0.0,
+		1.0, 0.0,0.0,
+
+		0.0,0.0, 1.0,
+		0.0, 1.0,0.0,
+		1.0, 0.0,0.0,
+
+		0.0,0.0, 1.0,
+		0.0, 1.0,0.0,
+		-1.0,0.0,0.0,
+
+	};
+	GLuint indices[]={
+		0,15,3, //BACK
+		0,12,15,
+
+		2,11,23, // LEFT
+		2,23,11,
+
+		9,6,18, // FRONT
+		9,18,21,
+
+		8,5,17, // RIGHT
+		8,17,20,
+
+		1,4,7, // BOTTOM
+		1,7,10,
+
+		22,19,16, // TOP
+		22,16,13
+	};
+	return LoadDataToModel(vertices, normals, NULL, NULL, indices, 24, 36);
+}
 
 // Loader for inline data to Model (almost same as LoadModelPlus)
 Model* LoadDataToModel(
