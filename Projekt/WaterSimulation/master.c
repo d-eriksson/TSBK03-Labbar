@@ -116,7 +116,7 @@ Model* skybox;
 
 vec3 cam, point;
 
-GLuint shader = 0, skyboxShader = 0. waterShader = 0;
+GLuint shader = 0, skyboxShader = 0, waterShader = 0;
 GLint lastw = W, lasth = H;  // for resizing
 //-----------------------------matrices------------------------------
 mat4 projectionMatrix,
