@@ -31,11 +31,11 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.05
+#define kParticleSize 0.06
 #define controlParticleSize 0.5
 #define ELASTICITY 1
 #define BOXSIZE 0.7
-#define RENDERBOXSIZE 1.0
+#define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
 #define LOG false
 
@@ -61,7 +61,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 16}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 32}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -94,13 +94,14 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 100}; // Change as desired
+enum {kNumParticles = 600}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
 Particle particles[kNumParticles]; // We only use kNumParticles but textures for all 16 are always loaded so they must exist. So don't change here, change above.
 Particle ControlableParticle;
 
+Model *box;
 GRID waterGrid;
 int tempVertices[16];
 GLfloat deltaT, currentTime;
@@ -129,7 +130,7 @@ GLint directional[] = {0};
 vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
 
 //-----------------------------------skybox-------------
-float skyboxVert[] = {
+/*float skyboxVert[] = {
 	-2.0f, -2.0f, -2.0f,
 	2.0f, -2.0f, -2.0f,
 	2.0f, -2.0f, 2.0f,
@@ -138,6 +139,17 @@ float skyboxVert[] = {
 	2.0f, 2.0f, -2.0f,
 	2.0f, 2.0f, 2.0f,
 	-2.0f, 2.0f, 2.0f
+
+};*/
+float skyboxVert[] = {
+	-BOXSIZE, -BOXSIZE, -BOXSIZE,
+	BOXSIZE, -BOXSIZE, -BOXSIZE,
+	BOXSIZE, -BOXSIZE, BOXSIZE,
+	-BOXSIZE, -BOXSIZE, BOXSIZE,
+	-BOXSIZE, BOXSIZE, -BOXSIZE,
+	BOXSIZE, BOXSIZE, -BOXSIZE,
+	BOXSIZE, BOXSIZE, BOXSIZE,
+	-BOXSIZE, BOXSIZE, BOXSIZE
 
 };
 
@@ -262,8 +274,8 @@ void updateWorld()
             particles[i].PX.x = particles[i].X.x ;
         }
 
-        if (particles[i].X.y < 0.0 + kParticleSize){
-            particles[i].X.y = kParticleSize;
+        if (particles[i].X.y < -BOXSIZE + kParticleSize){
+            particles[i].X.y = -BOXSIZE + kParticleSize;
             particles[i].PX.y = particles[i].X.y ;
         }
 
@@ -357,8 +369,8 @@ void updateWorld()
             particles[i].X.x = BOXSIZE - kParticleSize;
         }
 
-        if (particles[i].X.y < 0 + kParticleSize){
-            particles[i].X.y = kParticleSize;
+        if (particles[i].X.y < -BOXSIZE + kParticleSize){
+            particles[i].X.y = -BOXSIZE + kParticleSize;
         }
 
 		if (particles[i].X.z < -BOXSIZE + kParticleSize){
@@ -400,7 +412,7 @@ void evaluateGrid(){
                 for(int h = Nh-subSet; h <= Nh+subSet; h++){
                     for(int d = Nd-subSet; d <= Nd+subSet; d++){
                         if(w < GridPointsPerDim &&  w >= 0  && h < GridPointsPerDim && h >= 0 &&  d < GridPointsPerDim &&  d >= 0){
-                            if(abs(Norm(VectorSub(waterGrid.points[w][h][d].position , particles[i].X))) <= (2.2*kParticleSize)){
+                            if(abs(Norm(VectorSub(waterGrid.points[w][h][d].position , particles[i].X))) <= (2.0*kParticleSize)){
                                 waterGrid.points[w][h][d].value = true;
                             }
                         }
@@ -650,6 +662,7 @@ void init()
     shader = loadShaders("shaders/lab3.vert", "shaders/lab3.frag");
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
+    box = BoxModel(BOXSIZE,1.0,BOXSIZE, 0.0,-1.0,0.0);
     
     preAllocateVertices();
     projectionMatrix = perspective(90, 1.0, 0.1, 1000); // It would be silly to upload an uninitialized matrix
@@ -682,12 +695,12 @@ void init()
 
     char faces[6][15] =
     {
-        "right.jpg",
-        "left.jpg",
+        "tile.jpg",
+        "tile.jpg",
         "top.jpg",
-        "bottom.jpg",
-        "front.jpg",
-        "back.jpg"
+        "tile.jpg",
+        "tile.jpg",
+        "tile.jpg"
     };
     cubemapTexture = loadCubemap(faces);  
 
