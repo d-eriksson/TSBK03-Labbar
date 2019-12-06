@@ -52,6 +52,7 @@ void EnableModelForShader(Model *m, GLuint program, // NOT TESTED
 			char* vertexVariableName,
 			char* normalVariableName,
 			char* texCoordVariableName);
+Model* BoxModel(float width, float height, float depth, float x, float y, float z );
 Model* LoadDataToModel(
 			GLfloat *vertices,
 			GLfloat *normals,
