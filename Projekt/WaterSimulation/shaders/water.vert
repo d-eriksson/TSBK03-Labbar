@@ -20,7 +20,7 @@ void main()
     
    // Normal = mat3(transpose(inverse(mdlMatrix))) * in_Normal;
    // Position = vec3(mdlMatrix * vec4(in_Position, 1.0));
-    Normal = in_Normal;
+    Normal = normalize(in_Normal);
     Position = in_Position;
     Camera = camera;
     gl_Position = projMatrix * viewMatrix * vec4(in_Position, 1.0);
