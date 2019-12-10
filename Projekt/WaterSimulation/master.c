@@ -715,7 +715,7 @@ void display(void)
     
     glEnable(GL_DEPTH_TEST);
     //glDisable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    glCullFace(GL_BACK);
     
     
     if(!RENDERBALLS){
