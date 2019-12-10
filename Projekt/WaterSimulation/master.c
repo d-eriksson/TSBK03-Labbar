@@ -130,17 +130,7 @@ GLint directional[] = {0};
 vec3 lightSourcesDirectionsPositions[] = { {0.0, 10.0, 0.0} };
 
 //-----------------------------------skybox-------------
-/*float skyboxVert[] = {
-	-2.0f, -2.0f, -2.0f,
-	2.0f, -2.0f, -2.0f,
-	2.0f, -2.0f, 2.0f,
-	-2.0f, -2.0f, 2.0f,
-	-2.0f, 2.0f, -2.0f,
-	2.0f, 2.0f, -2.0f,
-	2.0f, 2.0f, 2.0f,
-	-2.0f, 2.0f, 2.0f
 
-};*/
 float skyboxVert[] = {
 	-BOXSIZE, -BOXSIZE, -BOXSIZE,
 	BOXSIZE, -BOXSIZE, -BOXSIZE,
@@ -201,8 +191,10 @@ unsigned int loadCubemap(char faces[6][15])
 
     return textureID;
 }  
-
-
+// ---------------------------------Tesselation----------------------------------------
+ 
+GLint TessLevelInner = 2;
+GLint TessLevelOuter = 2;
 
 //----------------------------------Utility functions-----------------------------------
 void resetBuffers(){
@@ -430,7 +422,7 @@ void renderParticle(vec3 position, Material m, float scale)
     tmpMatrix = Mult(viewMatrix, tmpMatrix);
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
     loadMaterial(m);
-    DrawModel(sphere, shader, "in_Position", "in_Normal", NULL);
+    DrawModel(sphere, shader, "in_Position", "in_Normal", NULL, false);
 }
 //-------------------------------------------------------------------------------------
 void createGrid(){
@@ -658,7 +650,8 @@ void init()
     createGrid();
     // Load shader
     skyboxShader = loadShaders("shaders/skybox.vert", "shaders/skybox.frag");
-    waterShader = loadShaders("shaders/water.vert", "shaders/water.frag");
+    waterShader = loadShadersGT("shaders/water.vert", "shaders/water.frag",NULL,"shaders/water.tesc","shaders/water.tese");
+    //waterShader = loadShaders("shaders/water.vert", "shaders/water.frag");
     shader = loadShaders("shaders/lab3.vert", "shaders/lab3.frag");
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
@@ -672,6 +665,8 @@ void init()
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
     glUseProgram(waterShader);
     glUniformMatrix4fv(glGetUniformLocation(waterShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    glUniform1i(glGetUniformLocation(waterShader, "TessLevelInner"), TessLevelInner);
+	glUniform1i(glGetUniformLocation(waterShader, "TessLevelOuter"), TessLevelOuter);
 
     // Initialize ball data, positions etc
     float ParticleMargin = 0.0001;
@@ -689,7 +684,7 @@ void init()
     ControlableParticle.X = SetVector(0,2.0,0.0);
 
     ControlableParticle.mass = 1.0;
-    cam = SetVector(0, 4, 4);
+    cam = SetVector(0.27, 0.30, 0.38);
     point = SetVector(0, 0, 0);
     zprInit(&viewMatrix, cam, point, &ControlableParticle.X );  // camera controls
 
@@ -703,6 +698,7 @@ void init()
         "tile.jpg"
     };
     cubemapTexture = loadCubemap(faces);  
+    
 
     resetElapsedTime();
 }
@@ -712,7 +708,6 @@ void init()
 void display(void)
 {
     updateWorld();
-
     // Clear framebuffer & zbuffer
 	glClearColor(0.3, 0.3, 0.3, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -720,7 +715,7 @@ void display(void)
     
     glEnable(GL_DEPTH_TEST);
     //glDisable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    glCullFace(GL_FRONT);
     
     
     if(!RENDERBALLS){
@@ -733,7 +728,8 @@ void display(void)
         tmpMatrix = Mult(viewMatrix, transMatrix);
         glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
         glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
-        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL);
+
+        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, true);
     }
     printError("uploading to shader");
 
@@ -754,7 +750,7 @@ void display(void)
     tmpMatrix = Mult(viewMatrix, transMatrix);
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    DrawModel(skybox, skyboxShader, "in_Position", NULL, NULL);
+    DrawModel(skybox, skyboxShader, "in_Position", NULL, NULL, false);
     glDepthFunc(GL_LESS);
 	
 

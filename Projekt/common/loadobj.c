@@ -21,6 +21,10 @@
 
 #define PI 3.141592
 
+#define bool int
+#define true 1
+#define false 0
+
 
 typedef struct Mesh
 {
@@ -1156,7 +1160,7 @@ void ReportRerror(char *caller, char *name)
 // and to get attribute locations. This is clearly not optimal, but the
 // goal is stability.
 
-void DrawModel(Model *m, GLuint program, char* vertexVariableName, char* normalVariableName, char* texCoordVariableName)
+void DrawModel(Model *m, GLuint program, char* vertexVariableName, char* normalVariableName, char* texCoordVariableName, bool patches)
 {
 	if (m != NULL)
 	{
@@ -1200,8 +1204,13 @@ void DrawModel(Model *m, GLuint program, char* vertexVariableName, char* normalV
 			else
 				ReportRerror("DrawModel", texCoordVariableName);
 		}
-
-		glDrawElements(GL_TRIANGLES, m->numIndices, GL_UNSIGNED_INT, 0L);
+		if(patches){
+			glPatchParameteri(GL_PATCH_VERTICES, 3);
+			glDrawElements(GL_PATCHES, m->numIndices, GL_UNSIGNED_INT, 0L);
+		}else{
+			glDrawElements(GL_TRIANGLES, m->numIndices, GL_UNSIGNED_INT, 0L);
+		}
+		
 	}
 }
 
