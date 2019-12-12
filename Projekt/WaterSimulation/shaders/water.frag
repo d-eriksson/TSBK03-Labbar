@@ -1,9 +1,9 @@
-#version 450
+#version 330
 out vec4 out_color;
 
 
-in vec3 WorldPos_FS_in;
-in vec3 Normal_FS_in;
+in vec3 WorldPos_CS_in;
+in vec3 Normal_CS_in;
 
 
 uniform samplerCube skybox;
@@ -13,12 +13,12 @@ vec4 calculateLighting()
 {
 	const vec3 light = vec3(2, 1, -1); // Given in VIEW coordinates! You usually specify light sources in world coordinates.
 	
-    vec3 normal = normalize(Normal_FS_in);
+    vec3 normal = normalize(Normal_CS_in);
 
     vec3 lightDir, refl, color = vec3(0.0, 0.0, 0.0);
     float ambient = 0.8, diffuse, specular = 0.0;
 
-    vec3 camDir = normalize(WorldPos_FS_in);
+    vec3 camDir = normalize(WorldPos_CS_in);
 
     lightDir = normalize(light);
     
@@ -37,10 +37,10 @@ void main()
 {   
     const vec3 cameraPos = vec3(0, 4, 4); 
     float eta = 1.00 / 1.33;
-    vec3 I = normalize(WorldPos_FS_in - camera);
-    vec3 Reflect = reflect(I, normalize(Normal_FS_in));
-    vec3 Refract = refract(I, normalize(Normal_FS_in), eta);
-    float fresnel = 0.02037 + (1.0 - 0.02037) * pow(max(0.0,1.0 - dot(-I,Normal_FS_in)),5.0);
+    vec3 I = normalize(WorldPos_CS_in - camera);
+    vec3 Reflect = reflect(I, normalize(Normal_CS_in));
+    vec3 Refract = refract(I, normalize(Normal_CS_in), eta);
+    float fresnel = 0.02037 + (1.0 - 0.02037) * pow(max(0.0,1.0 - dot(-I,Normal_CS_in)),5.0);
     //float fresnel = eta + (1.0 - eta) * pow(max(0.0,1.0 - dot(-I,Normal_FS_in)),5.0);
 
     //vec4 blue = vec4(0.84,0.96,0.96,1);

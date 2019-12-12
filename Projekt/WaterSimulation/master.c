@@ -38,6 +38,7 @@
 #define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
 #define LOG false
+#define VERSION_4 true
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -638,7 +639,6 @@ void init()
     resetBuffers();
 	glClearColor(0.4, 0.4, 0.4, 0);
 	glClearDepth(1.0);
-
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	//glCullFace(GL_BACK);
@@ -650,8 +650,13 @@ void init()
     createGrid();
     // Load shader
     skyboxShader = loadShaders("shaders/skybox.vert", "shaders/skybox.frag");
-    waterShader = loadShadersGT("shaders/water.vert", "shaders/water.frag",NULL,"shaders/water.tesc","shaders/water.tese");
-    //waterShader = loadShaders("shaders/water.vert", "shaders/water.frag");
+    if(VERSION_4){
+        waterShader = loadShadersGT("shaders/water.vert", "shaders/water.frag",NULL,"shaders/water.tesc","shaders/water.tese");
+    }
+    else{
+        waterShader = loadShaders("shaders/water.vert", "shaders/water.frag");
+    }
+    
     shader = loadShaders("shaders/lab3.vert", "shaders/lab3.frag");
     printError("init shader");
     sphere = LoadModelPlus("sphere.obj");
@@ -665,8 +670,6 @@ void init()
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
     glUseProgram(waterShader);
     glUniformMatrix4fv(glGetUniformLocation(waterShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    glUniform1i(glGetUniformLocation(waterShader, "TessLevelInner"), TessLevelInner);
-	glUniform1i(glGetUniformLocation(waterShader, "TessLevelOuter"), TessLevelOuter);
 
     // Initialize ball data, positions etc
     float ParticleMargin = 0.0001;
@@ -729,8 +732,7 @@ void display(void)
         glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
         glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
 
-        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, true);
-        //DrawWireframeModel(Water, waterShader, "in_Position", "in_Normal", NULL);
+        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, VERSION_4);
     }
     printError("uploading to shader");
 
