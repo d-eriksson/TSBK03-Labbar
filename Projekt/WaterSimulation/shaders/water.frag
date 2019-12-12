@@ -33,7 +33,6 @@ vec4 calculateLighting()
 
     return vec4(color, 1.0);
 }
-
 void main()
 {   
     const vec3 cameraPos = vec3(0, 4, 4); 

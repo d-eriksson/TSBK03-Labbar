@@ -33,7 +33,7 @@
 #define NUM_LIGHTS 1
 #define kParticleSize 0.045
 #define controlParticleSize 0.5
-#define ELASTICITY 1
+#define ELASTICITY 0.6
 #define BOXSIZE 0.7
 #define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
@@ -61,7 +61,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 16}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 32}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -94,7 +94,7 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 1000}; // Change as desired
+enum {kNumParticles = 800}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -216,7 +216,7 @@ void updateWorld()
 	for (i = 0; i < kNumParticles; i++)
 	{
         // accelerate according to gravity
-        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-3.52,0), deltaT * deltaT));
+        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-4.0,0), deltaT * deltaT));
 
 	}
 
@@ -690,12 +690,12 @@ void init()
 
     char faces[6][15] =
     {
-        "tile.jpg",
-        "tile.jpg",
-        "top.jpg",
-        "tile.jpg",
-        "tile.jpg",
-        "tile.jpg"
+        "tile2.jpg",
+        "tile2.jpg",
+        "top1.jpg",
+        "tile2.jpg",
+        "tile2.jpg",
+        "tile2.jpg"
     };
     cubemapTexture = loadCubemap(faces);  
     
