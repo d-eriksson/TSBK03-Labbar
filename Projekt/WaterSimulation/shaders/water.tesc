@@ -1,22 +1,26 @@
-#version 410 core
+#version 450 core
 
-layout(vertices = 3) out;
-in vec3 Position[]; // From vertex shader
-in vec3 Normal[];
+// define the number of CPs in the output patch
+layout (vertices = 3) out;
 
-out vec3 tcPosition[]; // Output of TC
-out vec3 tcNormal[];
+// attributes of the input CPs
+in vec3 WorldPos_CS_in[];
+in vec3 Normal_CS_in[];
 
-uniform int TessLevelInner; // Sent from main program
-uniform int TessLevelOuter;
+// attributes of the output CPs
+out vec3 WorldPos_ES_in[];
+out vec3 Normal_ES_in[];
 
 void main()
 {
-    tcPosition[gl_InvocationID] = Position[gl_InvocationID]; // Pass through the vertex at hand
-    tcNormal[gl_InvocationID] = Normal[gl_InvocationID];
-    gl_TessLevelInner[0] = TessLevelInner; // Decide tesselation level
-    gl_TessLevelOuter[0] = TessLevelOuter;
-    gl_TessLevelOuter[1] = TessLevelOuter;
-    gl_TessLevelOuter[2] = TessLevelOuter;
-}
+    // Set the control points of the output patch
+    Normal_ES_in[gl_InvocationID] = Normal_CS_in[gl_InvocationID];
+    WorldPos_ES_in[gl_InvocationID] = WorldPos_CS_in[gl_InvocationID];
+        // Calculate the distance from the camera to the three control point
 
+    // Calculate the tessellation levels
+    gl_TessLevelOuter[0] = 5.0;
+    gl_TessLevelOuter[1] = 5.0;
+    gl_TessLevelOuter[2] = 5.0;
+    gl_TessLevelInner[0] = 5.0;
+}

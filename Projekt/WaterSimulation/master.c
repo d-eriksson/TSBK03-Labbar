@@ -31,7 +31,7 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.06
+#define kParticleSize 0.045
 #define controlParticleSize 0.5
 #define ELASTICITY 1
 #define BOXSIZE 0.7
@@ -61,7 +61,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 32}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 16}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -94,7 +94,7 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 600}; // Change as desired
+enum {kNumParticles = 1000}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -730,6 +730,7 @@ void display(void)
         glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
 
         DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, true);
+        //DrawWireframeModel(Water, waterShader, "in_Position", "in_Normal", NULL);
     }
     printError("uploading to shader");
 
