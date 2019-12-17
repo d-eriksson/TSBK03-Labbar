@@ -33,12 +33,12 @@
 #define NUM_LIGHTS 1
 #define kParticleSize 0.045
 #define controlParticleSize 0.5
-#define ELASTICITY 0.6
+#define ELASTICITY 0.4
 #define BOXSIZE 0.7
 #define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
 #define LOG false
-#define VERSION_4 true
+#define VERSION_4 false
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -95,7 +95,7 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 800}; // Change as desired
+enum {kNumParticles = 200}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
