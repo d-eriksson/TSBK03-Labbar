@@ -19,8 +19,8 @@ void main()
         // Calculate the distance from the camera to the three control point
 
     // Calculate the tessellation levels
-    gl_TessLevelOuter[0] = 5.0;
-    gl_TessLevelOuter[1] = 5.0;
-    gl_TessLevelOuter[2] = 5.0;
-    gl_TessLevelInner[0] = 5.0;
+    gl_TessLevelOuter[0] = 2.0;
+    gl_TessLevelOuter[1] = 2.0;
+    gl_TessLevelOuter[2] = 2.0;
+    gl_TessLevelInner[0] = 2.0;
 }

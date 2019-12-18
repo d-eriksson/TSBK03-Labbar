@@ -31,14 +31,14 @@
 #define FAR 100.0
 
 #define NUM_LIGHTS 1
-#define kParticleSize 0.045
+#define kParticleSize 0.05
 #define controlParticleSize 0.5
 #define ELASTICITY 0.4
 #define BOXSIZE 0.7
 #define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
 #define LOG false
-#define VERSION_4 false
+#define TESSELLATION true
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -62,7 +62,7 @@ float getElapsedTime()
 
   return currentTime - startTime;
 }
-enum {GridPointsPerDim = 32}; // Number of actual point GridPointsPerDim^3
+enum {GridPointsPerDim = 8}; // Number of actual point GridPointsPerDim^3
 typedef struct{
     vec3 points[3];
 }TRIANGLE;
@@ -92,10 +92,13 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 },
         ControlableParticleMt= { { 1.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
                     0.1, 0.6, 1.0, 0.0
+                },
+                waterMt={ { 0.4, 0.4, 1.0, 1.0 }, { 0.0, 0.0, 0.0, 0.0 },
+                    0.1, 0.6, 1.0, 0.0
                 };
 
 
-enum {kNumParticles = 200}; // Change as desired
+enum {kNumParticles = 800}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -192,7 +195,7 @@ unsigned int loadCubemap(char faces[6][15])
 
     return textureID;
 }  
-// ---------------------------------Tesselation----------------------------------------
+// ---------------------------------TESSELLATION----------------------------------------
  
 GLint TessLevelInner = 2;
 GLint TessLevelOuter = 2;
@@ -650,7 +653,7 @@ void init()
     createGrid();
     // Load shader
     skyboxShader = loadShaders("shaders/skybox.vert", "shaders/skybox.frag");
-    if(VERSION_4){
+    if(TESSELLATION){
         waterShader = loadShadersGT("shaders/water.vert", "shaders/water.frag",NULL,"shaders/water.tesc","shaders/water.tese");
     }
     else{
@@ -721,18 +724,34 @@ void display(void)
     glCullFace(GL_BACK);
     
     
-    if(!RENDERBALLS){
-        glUseProgram(waterShader);
+    if(renderMarchingCubes()){
+        if(renderWater()){
+            glUseProgram(waterShader);
 
-        evaluateGrid();
-        march();
-        Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
-        transMatrix = T(0.0, 0.0, 0.0); // position
-        tmpMatrix = Mult(viewMatrix, transMatrix);
-        glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
-        glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
+            evaluateGrid();
+            march();
+            Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
+            transMatrix = T(0.0, 0.0, 0.0); // position
+            tmpMatrix = Mult(viewMatrix, transMatrix);
+            glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+            glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
 
-        DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, VERSION_4);
+            DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, TESSELLATION);
+        }
+        else{
+            glUseProgram(shader);
+            evaluateGrid();
+            march();
+            Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
+
+            glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+            transMatrix = T(0.0, 0.0, 0.0); // position
+            tmpMatrix = Mult(viewMatrix, transMatrix);
+            glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+            loadMaterial(waterMt);
+            DrawModel(Water, shader, "in_Position", "in_Normal", NULL, false);
+        }
+
     }
     printError("uploading to shader");
 
@@ -740,7 +759,7 @@ void display(void)
     glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
     renderParticle(ControlableParticle.X, ControlableParticleMt, controlParticleSize/0.1);
     
-    if(RENDERBALLS){
+    if(!renderMarchingCubes()){
         for (int i = 0; i < kNumParticles; i++){
             renderParticle(particles[i].X, particleMt, kParticleSize/0.1);
         }

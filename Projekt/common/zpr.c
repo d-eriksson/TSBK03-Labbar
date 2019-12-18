@@ -34,10 +34,18 @@ static vec3 camera, lookAtPoint,
 static GLfloat angle_y = 0.0, angle_x = 0.0;
 static int lastX = 300, lastY = 300;
 static vec3 *controlBall;
+static bool RenderMarchingCubes;
+static bool RenderWater;
 
 //------------------------------------------------------------------------------
 vec3 getCamera(){
   return camera;
+}
+bool renderWater(){
+  return RenderWater;
+}
+bool renderMarchingCubes(){
+  return RenderMarchingCubes;
 }
 
 void updateCameraMatrix(mat4 *matrix)
@@ -68,6 +76,8 @@ void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point, vec3 *c_Ball)
     lookAtPoint = point;
     controlBall = c_Ball;
     up = SetVector(0, 1, 0);
+    RenderMarchingCubes = false;
+    RenderWater = false;
 
     updateCameraMatrix(NULL);
 
@@ -180,6 +190,18 @@ void zprKey(unsigned char key, int x, int y)
     break;
     case 'g':
       *controlBall = SetVector(0,controlBall->y +0.1, 0);
+    break;
+    case 'p':
+      if(!RenderMarchingCubes){
+          RenderMarchingCubes = true;
+      }
+      else if(RenderMarchingCubes && !RenderWater){
+          RenderWater = true;
+      }
+      else if(RenderMarchingCubes && RenderWater){
+          RenderMarchingCubes = false;
+          RenderWater = false;
+      }
     break;
    }
 
