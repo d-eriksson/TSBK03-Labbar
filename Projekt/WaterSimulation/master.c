@@ -32,13 +32,13 @@
 
 #define NUM_LIGHTS 1
 #define kParticleSize 0.05
-#define controlParticleSize 0.5
+#define controlParticleSize 0.4
 #define ELASTICITY 0.4
 #define BOXSIZE 0.7
 #define RENDERBOXSIZE 0.8
 #define RENDERBALLS false
 #define LOG false
-#define TESSELLATION true
+#define TESSELLATION false
 
 #define abs(x) (x > 0.0? x: -x)
 
@@ -75,10 +75,8 @@ typedef struct{
 }GRID;
 typedef struct
 {
-  GLfloat mass;
   vec3 X; // position, 
   vec3 PX; // previous position
-  vec3 a; // Acceleration
 } Particle;
 
 typedef struct
@@ -98,7 +96,7 @@ Material particleMt = { { 0.3, 0.5, 0.9, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumParticles = 800}; // Change as desired
+enum {kNumParticles = 400}; // Change as desired
 
 //------------------------------Globals---------------------------------
 Model *sphere;
@@ -107,7 +105,7 @@ Particle ControlableParticle;
 
 Model *box;
 GRID waterGrid;
-int tempVertices[16];
+int tempVertices[10];
 GLfloat deltaT, currentTime;
 GLfloat* Vertex_Array;
 GLfloat* Vertex_Array_Buffer_Water;
@@ -216,17 +214,13 @@ void updateWorld()
 {
 	int i, j;
 
-    // Add gravity
-	for (i = 0; i < kNumParticles; i++)
-	{
-        // accelerate according to gravity
-        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-4.0,0), deltaT * deltaT));
-
-	}
-
     // Collision test
     for (i = 0; i < kNumParticles; i++)
     {
+        // accelerate according to gravity
+        particles[i].X = VectorAdd(particles[i].X, ScalarMult(SetVector(0,-4.0,0), deltaT * deltaT));
+
+
         for (j = i+1; j < kNumParticles; j++)
         {    
             vec3 colNormal = VectorSub(particles[i].X, particles[j].X);
@@ -245,22 +239,18 @@ void updateWorld()
             }      
         }
         vec3 colNormal = VectorSub(particles[i].X, ControlableParticle.X);
-            float slength = DotProduct(colNormal,colNormal);
-            float length = sqrt(slength);
-            float target = kParticleSize + controlParticleSize ;
+        float slength = DotProduct(colNormal,colNormal);
+        float length = sqrt(slength);
+        float target = kParticleSize + controlParticleSize ;
 
-            if(length < target){
-                // resolve overlapping conflict
-                float factor = (length - target)/length;
-                particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor));
-            } 
+        if(length < target){
+            // resolve overlapping conflict
+            float factor = (length - target)/length;
+            particles[i].X = VectorSub(particles[i].X,ScalarMult(colNormal,factor));
+        } 
 
-    }
-
-	// Wall tests + inertia
-    for (i = 0; i < kNumParticles; i++)
-	{
-		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
+        // Wall tests + inertia
+        if (particles[i].X.x < -BOXSIZE + kParticleSize) {
             particles[i].X.x = -BOXSIZE + kParticleSize;
             particles[i].PX.x = particles[i].X.x ;
         }
@@ -285,14 +275,15 @@ void updateWorld()
             particles[i].PX.z = particles[i].X.z ;
         }
 
-
-
-       // Inertia
+        // Inertia
         vec3 dX = VectorSub(ScalarMult(particles[i].X,2),particles[i].PX);
         particles[i].PX = particles[i].X;
         particles[i].X = dX;
-	}
 
+    }
+
+	
+    
 	// Collision test keep energy
     for (i = 0; i < kNumParticles; i++)
     {
@@ -352,12 +343,8 @@ void updateWorld()
             particles[i].PX = VectorSub(particles[i].X, vi);
                 
         }
-
-    }
-    // Wall tests keep energy
-    for (i = 0; i < kNumParticles; i++)
-	{
-		if (particles[i].X.x < -BOXSIZE + kParticleSize) {
+        // Wall tests keep energy
+        if (particles[i].X.x < -BOXSIZE + kParticleSize) {
             particles[i].X.x = -BOXSIZE + kParticleSize;
         }
 
@@ -376,12 +363,10 @@ void updateWorld()
 		if (particles[i].X.z > BOXSIZE - kParticleSize){
             particles[i].X.z = BOXSIZE - kParticleSize;
         }		
-	}
+    }
 
-    ControlableParticle.PX = ControlableParticle.X;
-			
+    ControlableParticle.PX = ControlableParticle.X;		
 }
-
 
 void resetGrid(){
     for(int w = 0; w < GridPointsPerDim; w++ ){
@@ -392,6 +377,7 @@ void resetGrid(){
         }
     }
 }
+
 void evaluateGrid(){
     int Nw;
     int Nh;
@@ -638,13 +624,12 @@ void march(){
 void init()
 {
 	dumpInfo();
-	// GL initss
+	// GL inits
     resetBuffers();
 	glClearColor(0.4, 0.4, 0.4, 0);
 	glClearDepth(1.0);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -682,18 +667,15 @@ void init()
 	{
 		particles[i].X = SetVector((-BOXSIZE+kParticleSize) + ballSize *(i%ParticlesPerRow), 4 + kParticleSize +  ballSize * floor(i/(ParticlesPerRow*ParticlesPerRow)), (-BOXSIZE+kParticleSize) + ballSize * ((int)(i/ParticlesPerRow)%ParticlesPerRow));
 		particles[i].PX = particles[i].X;
-        particles[i].a = SetVector(0.0,0.0,0.0);
-        //particles[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
 	}
-
 
     ControlableParticle.X = SetVector(0,2.0,0.0);
 
-    ControlableParticle.mass = 1.0;
     cam = SetVector(0.27, 0.30, 0.38);
     point = SetVector(0, 0, 0);
     zprInit(&viewMatrix, cam, point, &ControlableParticle.X );  // camera controls
 
+    //Init cubemap
     char faces[6][15] =
     {
         "tile2.jpg",
@@ -705,7 +687,6 @@ void init()
     };
     cubemapTexture = loadCubemap(faces);  
     
-
     resetElapsedTime();
 }
 
@@ -718,22 +699,17 @@ void display(void)
 	glClearColor(0.3, 0.3, 0.3, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    
     glEnable(GL_DEPTH_TEST);
-    //glDisable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
     
     if(renderMarchingCubes()){
         if(renderWater()){
             glUseProgram(waterShader);
-
             evaluateGrid();
             march();
             Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
-            transMatrix = T(0.0, 0.0, 0.0); // position
-            tmpMatrix = Mult(viewMatrix, transMatrix);
-            glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+            glUniformMatrix4fv(glGetUniformLocation(waterShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
             glUniform3f(glGetUniformLocation(waterShader, "camera"), getCamera().x,getCamera().y,getCamera().z);
 
             DrawModel(Water, waterShader, "in_Position", "in_Normal", NULL, TESSELLATION);
@@ -743,11 +719,7 @@ void display(void)
             evaluateGrid();
             march();
             Water = LoadDataToModel(Vertex_Array_Buffer_Water,Normal_Array_Buffer_Water,NULL,NULL,Index_Array_Buffer_Water,vertices,vertices);
-
             glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-            transMatrix = T(0.0, 0.0, 0.0); // position
-            tmpMatrix = Mult(viewMatrix, transMatrix);
-            glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
             loadMaterial(waterMt);
             DrawModel(Water, shader, "in_Position", "in_Normal", NULL, false);
         }
@@ -768,18 +740,14 @@ void display(void)
     glUseProgram(skyboxShader);
     glDepthFunc(GL_LEQUAL);
     skybox = LoadDataToModel(skyboxVert,NULL,NULL,NULL,skyboxIndices,8,36);
-    transMatrix = S(1.0, 1.0, 1.0); // position
-    tmpMatrix = Mult(viewMatrix, transMatrix);
-    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "viewMatrix"), 1, GL_TRUE, tmpMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
     glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
     DrawModel(skybox, skyboxShader, "in_Position", NULL, NULL, false);
     glDepthFunc(GL_LESS);
-	
 
     printError("rendering");
 
 	glutSwapBuffers();
-
 }
 
 void onTimer(int value)

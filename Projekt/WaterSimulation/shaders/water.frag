@@ -45,7 +45,6 @@ void main()
     vec4 blue = vec4(0.9,1,1,1);
     //vec4 blue = vec4(0.78,0.86,0.94,1);
     
-    
     out_color = mix(texture(skybox, Refract),texture(skybox, Reflect), fresnel) * blue * calculateLighting();
    
 }
